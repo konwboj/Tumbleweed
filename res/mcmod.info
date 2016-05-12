@@ -2,9 +2,10 @@
 {
   "modid": "tumbleweed",
   "name": "Tumbleweed",
-  "description": "Tumbleweed",
+  "description": "Tumbleweeds spawn around dead bushes in deserts. They drop random goodies upon destroying.",
   "version": "${version}",
   "authors": ["konwboy"],
-  "authorList": ["konwboy"]
+  "authorList": ["konwboy"],
+  "logoFile": "logo.png"
 }
 ]

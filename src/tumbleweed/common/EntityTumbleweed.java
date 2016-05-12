@@ -15,7 +15,6 @@ import net.minecraft.entity.item.EntityMinecart;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
-import net.minecraft.item.ItemSpade;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.BlockPos;
@@ -253,7 +252,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	@Override
 	public boolean attackEntityFrom(DamageSource source, float amount)
 	{
-		if (!this.worldObj.isRemote && (!(source.getEntity() instanceof EntityPlayer) || ((EntityPlayer) source.getEntity()).capabilities.isCreativeMode))
+		if (!this.worldObj.isRemote)
 		{
 			Block.SoundType sound = Block.soundTypeGrass;
 			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getFrequency() * 0.8F);
@@ -489,19 +488,6 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 				}
 			}
 		}
-	}
-
-	@Override
-	public boolean interactFirst(EntityPlayer playerIn)
-	{
-		if (!this.worldObj.isRemote && playerIn.getHeldItem() != null && playerIn.getHeldItem().getItem() instanceof ItemSpade)
-		{
-			this.motionY += 0.2;
-			this.motionZ += 0.15;
-			this.velocityChanged = true;
-		}
-
-		return true;
 	}
 
 	@Override
