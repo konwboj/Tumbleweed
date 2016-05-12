@@ -1,0 +1,10 @@
+[
+{
+  "modid": "tumbleweed",
+  "name": "Tumbleweed",
+  "description": "Tumbleweed",
+  "version": "${version}",
+  "authors": ["konwboy"],
+  "authorList": ["konwboy"]
+}
+]
