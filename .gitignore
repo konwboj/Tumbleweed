@@ -1,1 +1,7 @@
 *.iml
+*.jar
+/.gradle
+/build
+*.txt
+*.xml
+*.properties
