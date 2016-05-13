@@ -1,11 +1,10 @@
 package tumbleweed.common;
 
-import com.google.common.base.Predicate;
+import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockFence;
-import net.minecraft.block.BlockFenceGate;
-import net.minecraft.block.BlockWall;
 import net.minecraft.block.material.Material;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
@@ -17,14 +16,10 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.BlockPos;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.ReportedException;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Vector4f;
 import tumbleweed.Tumbleweed;
@@ -242,7 +237,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 				}
 			}
 
-			if (this.age > 2 * 60 * 20)
+			if (this.age > 2 * 60 * 20 && this.fadeAge == 0)
 			{
 				this.startFading();
 			}
@@ -255,13 +250,13 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		if (!this.worldObj.isRemote)
 		{
 			Block.SoundType sound = Block.soundTypeGrass;
-			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getFrequency() * 0.8F);
+			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
 
 			EntityItem entityitem = new EntityItem(this.worldObj, this.posX, this.posY, this.posZ, Config.getRandomItem());
 			entityitem.motionX = 0;
 			entityitem.motionY = 0.2D;
 			entityitem.motionZ = 0;
-			entityitem.setDefaultPickupDelay();
+			entityitem.delayBeforeCanPickup = 10;
 			this.worldObj.spawnEntityInWorld(entityitem);
 
 			this.kill();
@@ -277,7 +272,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	{
 		if (this.noClip)
 		{
-			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(x, y, z));
+			this.getBoundingBox().offset(x, y, z);
 			this.resetPositionToBB();
 		} else
 		{
@@ -300,22 +295,22 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			double d4 = y;
 			double d5 = z;
 
-			List<AxisAlignedBB> list1 = this.worldObj.getCollidingBoundingBoxes(this, this.getEntityBoundingBox().addCoord(x, y, z));
+			List<AxisAlignedBB> list1 = this.worldObj.getCollidingBoundingBoxes(this, this.boundingBox.addCoord(x, y, z));
 
 			for (AxisAlignedBB axisalignedbb1 : list1)
-				y = axisalignedbb1.calculateYOffset(this.getEntityBoundingBox(), y);
+				y = axisalignedbb1.calculateYOffset(this.boundingBox, y);
 
-			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(0.0D, y, 0.0D));
+			this.boundingBox.offset(0.0D, y, 0.0D);
 
 			for (AxisAlignedBB axisalignedbb2 : list1)
-				x = axisalignedbb2.calculateXOffset(this.getEntityBoundingBox(), x);
+				x = axisalignedbb2.calculateXOffset(this.boundingBox, x);
 
-			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(x, 0.0D, 0.0D));
+			this.boundingBox.offset(x, 0.0D, 0.0D);
 
 			for (AxisAlignedBB axisalignedbb13 : list1)
-				z = axisalignedbb13.calculateZOffset(this.getEntityBoundingBox(), z);
+				z = axisalignedbb13.calculateZOffset(this.boundingBox, z);
 
-			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(0.0D, 0.0D, z));
+			this.boundingBox.offset(0.0D, 0.0D, z);
 
 			this.worldObj.theProfiler.endSection();
 			this.worldObj.theProfiler.startSection("rest");
@@ -327,21 +322,13 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			int i = MathHelper.floor_double(this.posX);
 			int j = MathHelper.floor_double(this.posY - 0.2D);
 			int k = MathHelper.floor_double(this.posZ);
-			BlockPos blockpos = new BlockPos(i, j, k);
-			Block block1 = this.worldObj.getBlockState(blockpos).getBlock();
+			Block block = this.worldObj.getBlock(i, j, k);
 
-			if (block1.getMaterial() == Material.air)
-			{
-				Block block = this.worldObj.getBlockState(blockpos.down()).getBlock();
+			int i1 = this.worldObj.getBlock(i, j - 1, k).getRenderType();
+			if (i1 == 11 || i1 == 32 || i1 == 21)
+				block = this.worldObj.getBlock(i, j - 1, k);
 
-				if (block instanceof BlockFence || block instanceof BlockWall || block instanceof BlockFenceGate)
-				{
-					block1 = block;
-					blockpos = blockpos.down();
-				}
-			}
-
-			this.updateFallState(y, this.onGround, block1, blockpos);
+			this.updateFallState(y, this.onGround);
 
 			if (d3 != x)
 				this.motionX = 0.0D;
@@ -351,16 +338,16 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 			if (d4 != y)
 			{
-				block1.onLanded(this.worldObj, this);
+				this.motionY = 0.0D;
 
-				if (block1 == Blocks.farmland)
+				if (block == Blocks.farmland)
 				{
-					if (!worldObj.isRemote && worldObj.rand.nextFloat() < 0.7F)
+					if (!this.worldObj.isRemote && this.worldObj.rand.nextFloat() < 0.7F)
 					{
-						if (!worldObj.getGameRules().getBoolean("mobGriefing"))
+						if (!this.worldObj.getGameRules().getGameRuleBooleanValue("mobGriefing"))
 							return;
 
-						worldObj.setBlockState(blockpos, Blocks.dirt.getDefaultState());
+						this.worldObj.setBlock(i, j, k, Blocks.dirt);
 					}
 				}
 			}
@@ -369,16 +356,16 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			double d16 = this.posY - d1;
 			double d17 = this.posZ - d2;
 
-			if (block1 != Blocks.ladder)
+			if (block != Blocks.ladder)
 				d16 = 0.0D;
 
 			if (this.onGround)
-				block1.onEntityCollidedWithBlock(this.worldObj, blockpos, this);
+				block.onEntityCollidedWithBlock(this.worldObj, i, j, k, this);
 
 			this.distanceWalkedModified = (float) ((double) this.distanceWalkedModified + (double) MathHelper.sqrt_double(d15 * d15 + d17 * d17) * 0.6D);
 			this.distanceWalkedOnStepModified = (float) ((double) this.distanceWalkedOnStepModified + (double) MathHelper.sqrt_double(d15 * d15 + d16 * d16 + d17 * d17) * 0.6D);
 
-			if (this.distanceWalkedOnStepModified > (float) this.nextStepDistance && block1.getMaterial() != Material.air)
+			if (this.distanceWalkedOnStepModified > (float) this.nextStepDistance && block.getMaterial() != Material.air)
 			{
 				this.nextStepDistance = (int) this.distanceWalkedOnStepModified + 1;
 
@@ -392,16 +379,16 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 					this.playSound(this.getSwimSound(), f, 1.0F + (this.rand.nextFloat() - this.rand.nextFloat()) * 0.4F);
 				}
 
-				if (!block1.getMaterial().isLiquid())
+				if (!block.getMaterial().isLiquid())
 				{
 					Block.SoundType sound = Block.soundTypeGrass;
-					this.playSound(sound.getStepSound(), sound.getVolume() * 0.15F, sound.getFrequency());
+					this.playSound(sound.getStepResourcePath(), sound.getVolume() * 0.15F, sound.getPitch());
 				}
 			}
 
 			try
 			{
-				this.doBlockCollisions();
+				this.func_145775_I();
 			} catch (Throwable throwable)
 			{
 				CrashReport crashreport = CrashReport.makeCrashReport(throwable, "Checking entity block collision");
@@ -416,20 +403,14 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 	private void resetPositionToBB()
 	{
-		this.posX = (this.getEntityBoundingBox().minX + this.getEntityBoundingBox().maxX) / 2.0D;
-		this.posY = this.getEntityBoundingBox().minY;
-		this.posZ = (this.getEntityBoundingBox().minZ + this.getEntityBoundingBox().maxZ) / 2.0D;
+		this.posX = (this.boundingBox.minX + this.boundingBox.maxX) / 2.0D;
+		this.posY = this.boundingBox.minY + (double) this.yOffset;
+		this.posZ = (this.boundingBox.minZ + this.boundingBox.maxZ) / 2.0D;
 	}
 
 	private void collideWithNearbyEntities()
 	{
-		List list = this.worldObj.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox().expand(0.2D, 0.0D, 0.2D), new Predicate<Entity>()
-		{
-			public boolean apply(Entity p_apply_1_)
-			{
-				return p_apply_1_.canBePushed();
-			}
-		});
+		List list = this.worldObj.getEntitiesWithinAABBExcludingEntity(this, this.boundingBox.expand(0.2D, 0.0D, 0.2D));
 
 		if (!list.isEmpty())
 			for (int i = 0; i < list.size(); ++i)
@@ -445,7 +426,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		{
 			if (!this.noClip && !entity.noClip)
 			{
-				if (!this.worldObj.isRemote && entity instanceof EntityMinecart && ((EntityMinecart) entity).getMinecartType() == EntityMinecart.EnumMinecartType.RIDEABLE && entity.motionX * entity.motionX + entity.motionZ * entity.motionZ > 0.01D && entity.riddenByEntity == null && this.ridingEntity == null)
+				if (!this.worldObj.isRemote && entity instanceof EntityMinecart && ((EntityMinecart) entity).getMinecartType() == 0 && entity.motionX * entity.motionX + entity.motionZ * entity.motionZ > 0.01D && entity.riddenByEntity == null && this.ridingEntity == null)
 				{
 					this.mountEntity(entity);
 					this.motionY += 0.25;
@@ -516,7 +497,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		if (!this.worldObj.isRemote)
 		{
 			if (!this.isDead)
-				for (EntityPlayer other : this.worldObj.playerEntities)
+				for (EntityPlayer other : (List<EntityPlayerMP>) this.worldObj.playerEntities)
 				{
 					if (other != null && other.worldObj == this.worldObj)
 					{
@@ -533,7 +514,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 	public boolean isNotColliding()
 	{
-		return this.worldObj.checkNoEntityCollision(this.getEntityBoundingBox(), this) && this.worldObj.getCollidingBoundingBoxes(this, this.getEntityBoundingBox()).isEmpty() && !this.worldObj.isAnyLiquid(this.getEntityBoundingBox());
+		return this.worldObj.checkNoEntityCollision(this.boundingBox, this) && this.worldObj.getCollidingBoundingBoxes(this, this.boundingBox).isEmpty() && !this.worldObj.isAnyLiquid(this.boundingBox);
 	}
 
 	public float getWindX()

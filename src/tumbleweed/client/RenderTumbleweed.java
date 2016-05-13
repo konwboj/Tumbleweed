@@ -1,10 +1,8 @@
 package tumbleweed.client;
 
-import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.Render;
-import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.client.registry.IRenderFactory;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.vector.Matrix4f;
@@ -13,22 +11,21 @@ import tumbleweed.common.EntityTumbleweed;
 
 import java.nio.FloatBuffer;
 
-public class RenderTumbleweed extends Render<EntityTumbleweed>
+public class RenderTumbleweed extends Render
 {
 	private static final ResourceLocation texture = new ResourceLocation("tumbleweed", "textures/entity/tumbleweed.png");
 
 	private ModelTumbleweed tumbleweed;
 	private int lastV = 0;
 
-	public RenderTumbleweed(RenderManager manager)
+	public RenderTumbleweed()
 	{
-		super(manager);
 		this.tumbleweed = new ModelTumbleweed();
 		this.lastV = this.tumbleweed.getV();
 	}
 
 	@Override
-	public void doRender(EntityTumbleweed entity, double x, double y, double z, float p_76986_8_, float partialTicks)
+	public void doRender(Entity entity, double x, double y, double z, float p_76986_8_, float partialTicks)
 	{
 		if (lastV != tumbleweed.getV())
 		{
@@ -36,42 +33,42 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 			this.lastV = tumbleweed.getV();
 		}
 
-		GlStateManager.pushMatrix();
+		EntityTumbleweed tumbleweed = (EntityTumbleweed) entity;
 
-		GlStateManager.disableLighting();
-		GlStateManager.enableBlend();
-		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		GL11.glPushMatrix();
+
+		GL11.glDisable(GL11.GL_LIGHTING);
+		GL11.glEnable(GL11.GL_BLEND);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
 		float alpha = 0.7f;
 		float ageFade = 4f * 20f;
-		if (entity.fadeAge > 1)
-			alpha -= entity.fadeAge / ageFade;
+		if (tumbleweed.fadeAge > 1)
+			alpha -= tumbleweed.fadeAge / ageFade;
 		if (alpha < 0.0)
 			alpha = 0f;
 
-		GlStateManager.color(1.0f, 1.0f, 1.0f, alpha);
-		GlStateManager.translate((float) x, (float) y + 0.25F, (float) z);
+		GL11.glColor4f(1.0f, 1.0f, 1.0f, alpha);
+		GL11.glTranslatef((float) x, (float) y + 0.25F, (float) z);
 
 		FloatBuffer buffer = BufferUtils.createFloatBuffer(4 * 4);
-		toMatrix(slerp(entity.prevQuat, entity.quat, partialTicks)).store(buffer);
+		toMatrix(slerp(tumbleweed.prevQuat, tumbleweed.quat, partialTicks)).store(buffer);
 		buffer.flip();
-		GlStateManager.multMatrix(buffer);
+		GL11.glMultMatrix(buffer);
 
-		float size = 1.0f + entity.getSize() * (1 / 8f);
-		GlStateManager.scale(size, size, size);
+		float size = 1.0f + tumbleweed.getSize() * (1 / 8f);
+		GL11.glScalef(size, size, size);
 
 		this.bindTexture(texture);
 		this.tumbleweed.render(entity, 0, 0, 0, 0, 0, 0.0625F);
 
-		GlStateManager.disableBlend();
-		GlStateManager.enableLighting();
-		GlStateManager.popMatrix();
-
-		super.doRender(entity, x, y, z, p_76986_8_, partialTicks);
+		GL11.glDisable(GL11.GL_BLEND);
+		GL11.glEnable(GL11.GL_LIGHTING);
+		GL11.glPopMatrix();
 	}
 
 	@Override
-	protected ResourceLocation getEntityTexture(EntityTumbleweed entity)
+	protected ResourceLocation getEntityTexture(Entity entity)
 	{
 		return texture;
 	}
@@ -139,14 +136,5 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 		result.w = (scale0 * start.w) + (scale1 * end.w);
 
 		return result;
-	}
-
-	public static class Factory implements IRenderFactory<EntityTumbleweed>
-	{
-		@Override
-		public Render<? super EntityTumbleweed> createRenderFor(RenderManager manager)
-		{
-			return new RenderTumbleweed(manager);
-		}
 	}
 }

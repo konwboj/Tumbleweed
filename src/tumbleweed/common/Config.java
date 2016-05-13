@@ -1,12 +1,11 @@
 package tumbleweed.common;
 
 import com.google.common.collect.Lists;
+import cpw.mods.fml.common.registry.GameData;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
-import net.minecraftforge.fml.common.registry.GameData;
 import org.apache.logging.log4j.Level;
 import tumbleweed.Tumbleweed;
 
@@ -36,8 +35,8 @@ public class Config
 	{
 		weightedItems.clear();
 
-		Property itemConfig = config.get(Configuration.CATEGORY_GENERAL, "Rare Items", defaults);
-		itemConfig.comment = "These items will drop from tumbleweed upon destroying.\nThe first number is entry weight and the string is item name.";
+		Property itemConfig = config.get(Configuration.CATEGORY_GENERAL, "Drops", defaults);
+		itemConfig.comment = "These items will drop from tumbleweed upon destroying.\nFirst number is entry weight and the string after space is item name.";
 		if (itemConfig.isList())
 		{
 			String[] items = itemConfig.getStringList();
@@ -75,7 +74,7 @@ public class Config
 			if (countedWeight >= randomWeight)
 			{
 				String[] parts = weightedItem.getId().split(":");
-				Item item = GameData.getItemRegistry().getObject(new ResourceLocation(parts[0] + ":" + parts[1]));
+				Item item = (Item) GameData.getItemRegistry().getObject(parts[0] + ":" + parts[1]);
 				int meta = 0;
 				if (parts.length >= 3)
 					meta = Integer.parseInt(parts[2]);

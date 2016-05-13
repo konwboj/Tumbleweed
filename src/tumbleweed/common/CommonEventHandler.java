@@ -1,23 +1,24 @@
 package tumbleweed.common;
 
 import com.google.common.collect.Sets;
+import cpw.mods.fml.client.event.ConfigChangedEvent;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.PlayerEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.BlockPos;
+import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraftforge.fml.client.event.ConfigChangedEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.PlayerEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 import tumbleweed.Tumbleweed;
 
+import java.util.List;
 import java.util.Set;
 
 public class CommonEventHandler
@@ -30,53 +31,52 @@ public class CommonEventHandler
 	{
 		WorldServer world = (WorldServer) event.world;
 
-		if (event.phase == TickEvent.Phase.END && world.provider.getDimensionId() == 0)
+		if (event.phase == TickEvent.Phase.END && world.provider.dimensionId == 0)
 		{
 			if (this.ticks % 200 == 0)
 			{
 				Set<ChunkCoordIntPair> eligibleChunksForSpawning = Sets.newHashSet();
 				int i = 0;
 
-				for (EntityPlayer entityplayer : world.playerEntities)
+				for (EntityPlayer entityplayer : (List<EntityPlayer>) world.playerEntities)
 				{
-					if (!entityplayer.isSpectator())
+					int j = MathHelper.floor_double(entityplayer.posX / 16.0D);
+					int k = MathHelper.floor_double(entityplayer.posZ / 16.0D);
+					int l = 8;
+
+					for (int i1 = -l; i1 <= l; ++i1)
 					{
-						int j = MathHelper.floor_double(entityplayer.posX / 16.0D);
-						int k = MathHelper.floor_double(entityplayer.posZ / 16.0D);
-						int l = 8;
-
-						for (int i1 = -l; i1 <= l; ++i1)
+						for (int j1 = -l; j1 <= l; ++j1)
 						{
-							for (int j1 = -l; j1 <= l; ++j1)
+							boolean flag = i1 == -l || i1 == l || j1 == -l || j1 == l;
+							ChunkCoordIntPair chunkcoordintpair = new ChunkCoordIntPair(i1 + j, j1 + k);
+
+							if (!eligibleChunksForSpawning.contains(chunkcoordintpair))
 							{
-								boolean flag = i1 == -l || i1 == l || j1 == -l || j1 == l;
-								ChunkCoordIntPair chunkcoordintpair = new ChunkCoordIntPair(i1 + j, j1 + k);
+								++i;
 
-								if (!eligibleChunksForSpawning.contains(chunkcoordintpair))
+								if (!flag)
 								{
-									++i;
-
-									if (!flag && world.getWorldBorder().contains(chunkcoordintpair))
-										eligibleChunksForSpawning.add(chunkcoordintpair);
+									eligibleChunksForSpawning.add(chunkcoordintpair);
 								}
 							}
 						}
 					}
 				}
 
-				BlockPos spawnPoint = world.getSpawnPoint();
+				ChunkCoordinates chunkcoordinates = world.getSpawnPoint();
 				int j4 = world.countEntities(EntityTumbleweed.class);
-				int k4 = 35 * i / MOB_COUNT_DIV;
+				int k4 = 25 * i / MOB_COUNT_DIV;
 
-				for (ChunkCoordIntPair chunkcoordintpair : eligibleChunksForSpawning)
+				for (ChunkCoordIntPair chunkcoordintpair1 : eligibleChunksForSpawning)
 				{
 					if (j4 > k4)
 						break;
 
 					if (world.rand.nextFloat() < 0.4f)
 					{
-						BlockPos blockpos = getRandomChunkPosition(world, chunkcoordintpair.chunkXPos, chunkcoordintpair.chunkZPos);
-						BlockPos deadBush = null;
+						ChunkCoordinates blockpos = getRandomChunkPosition(world, chunkcoordintpair1.chunkXPos, chunkcoordintpair1.chunkZPos);
+						ChunkCoordinates deadBush = null;
 						int r = 4;
 
 						for (int x = -r; x < r; x++)
@@ -85,9 +85,9 @@ public class CommonEventHandler
 							{
 								for (int z = -r; z < r; z++)
 								{
-									BlockPos check = new BlockPos(blockpos.getX() + x, blockpos.getY() + y, blockpos.getZ() + z);
-									Block block = world.getBlockState(check).getBlock();
-									if (block == Blocks.deadbush && world.getLight(check) > 8)
+									ChunkCoordinates check = new ChunkCoordinates(blockpos.posX + x, blockpos.posY + y, blockpos.posZ + z);
+									Block block = world.getBlock(check.posX, check.posY, check.posZ);
+									if (block == Blocks.deadbush && world.getFullBlockLightValue(check.posX, check.posY, check.posZ) > 8)
 									{
 										deadBush = check;
 										break;
@@ -98,13 +98,18 @@ public class CommonEventHandler
 
 						if (deadBush != null)
 						{
-							int x = deadBush.getX();
-							int y = deadBush.getY();
-							int z = deadBush.getZ();
+							int x = deadBush.posX;
+							int y = deadBush.posY;
+							int z = deadBush.posZ;
 
-							if (!world.isAnyPlayerWithinRangeAt((double) x, (double) y, (double) z, 24.0D) && spawnPoint.distanceSq((double) x, (double) y, (double) z) >= 24.0 * 24.0)
+							float f3 = x - (float) chunkcoordinates.posX;
+							float f4 = y - (float) chunkcoordinates.posY;
+							float f5 = z - (float) chunkcoordinates.posZ;
+							float f6 = f3 * f3 + f4 * f4 + f5 * f5;
+
+							if (world.getClosestPlayer((double) x, (double) y, (double) z, 24.0D) == null && f6 >= 24.0 * 24.0)
 							{
-								BiomeGenBase biome = world.getBiomeGenForCoords(deadBush);
+								BiomeGenBase biome = world.getBiomeGenForCoords(deadBush.posX, deadBush.posZ);
 								if (biome.temperature > 1.8f && biome.rainfall == 0f)
 								{
 									EntityTumbleweed entity = new EntityTumbleweed(world);
@@ -135,7 +140,6 @@ public class CommonEventHandler
 
 			this.ticks++;
 		}
-
 	}
 
 	@SubscribeEvent
@@ -151,13 +155,15 @@ public class CommonEventHandler
 			Config.load();
 	}
 
-	private static BlockPos getRandomChunkPosition(World worldIn, int x, int z)
+	private static ChunkCoordinates getRandomChunkPosition(World worldIn, int x, int z)
 	{
 		Chunk chunk = worldIn.getChunkFromChunkCoords(x, z);
-		int i = x * 16 + worldIn.rand.nextInt(16);
-		int j = z * 16 + worldIn.rand.nextInt(16);
-		int k = chunk.getHeight(new BlockPos(i, 0, j)) + 1;
+		int chunkX = worldIn.rand.nextInt(16);
+		int chunkZ = worldIn.rand.nextInt(16);
+		int i = x * 16 + chunkX;
+		int j = z * 16 + chunkZ;
+		int k = chunk.getHeightValue(chunkX, chunkZ) + 1;
 
-		return new BlockPos(i, k, j);
+		return new ChunkCoordinates(i, k, j);
 	}
 }

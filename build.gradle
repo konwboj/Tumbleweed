@@ -1,27 +1,29 @@
 buildscript {
     repositories {
-        jcenter()
+        mavenCentral()
         maven {
             name = "forge"
             url = "http://files.minecraftforge.net/maven"
         }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.8.9-0.1"
-group= "konwboj.tumbleweed"
+apply plugin: "forge"
+
+version = "1.7.10-0.1"
 archivesBaseName = "tumbleweed"
 
 minecraft {
-	version = "1.8.9-11.15.1.1722"
-  mappings = "stable_20"
+  version = "1.7.10-10.13.4.1558-1.7.10"
 	replace "@VERSION@", project.version
 	replaceIn "Tumbleweed.java"
-	makeObfSourceJar = false
 }
 
 sourceSets
@@ -42,7 +44,7 @@ processResources
         include 'mcmod.info'
         expand 'version':project.version, 'mcversion':project.minecraft.version
     }
-        
+		
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
     }

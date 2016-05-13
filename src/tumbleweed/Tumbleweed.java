@@ -1,15 +1,15 @@
 package tumbleweed;
 
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.SidedProxy;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
-import net.minecraftforge.fml.common.registry.EntityRegistry;
-import net.minecraftforge.fml.relauncher.Side;
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Mod;
+import cpw.mods.fml.common.SidedProxy;
+import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLPostInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import cpw.mods.fml.common.network.NetworkRegistry;
+import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+import cpw.mods.fml.common.registry.EntityRegistry;
+import cpw.mods.fml.relauncher.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import tumbleweed.common.CommonEventHandler;
@@ -20,7 +20,7 @@ import tumbleweed.common.MessageFade;
 import tumbleweed.common.MessageWind;
 import tumbleweed.common.References;
 
-@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.8.9]")
+@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY)
 public class Tumbleweed
 {
 	@Mod.Instance(References.MOD_ID)
@@ -54,7 +54,7 @@ public class Tumbleweed
 	public static void init(FMLInitializationEvent event)
 	{
 		EntityRegistry.registerModEntity(EntityTumbleweed.class, "Tumbleweed", 0, Tumbleweed.instance, 64, 20, true);
-		MinecraftForge.EVENT_BUS.register(new CommonEventHandler());
+		FMLCommonHandler.instance().bus().register(new CommonEventHandler());
 	}
 
 	@Mod.EventHandler

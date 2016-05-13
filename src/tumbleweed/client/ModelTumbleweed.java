@@ -60,6 +60,6 @@ public class ModelTumbleweed extends ModelBase
 
 	public int getV()
 	{
-		return 45;
+		return 42;
 	}
 }
