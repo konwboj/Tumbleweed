@@ -36,7 +36,7 @@ public class Config
 	{
 		weightedItems.clear();
 
-		Property itemConfig = config.get(Configuration.CATEGORY_GENERAL, "Rare Items", defaults);
+		Property itemConfig = config.get(Configuration.CATEGORY_GENERAL, "Drops", defaults);
 		itemConfig.comment = "These items will drop from tumbleweed upon destroying.\nThe first number is entry weight and the string is item name.";
 		if (itemConfig.isList())
 		{

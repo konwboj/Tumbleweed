@@ -242,7 +242,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 				}
 			}
 
-			if (this.age > 2 * 60 * 20)
+			if (this.age > 2 * 60 * 20 && this.fadeAge == 0)
 			{
 				this.startFading();
 			}
