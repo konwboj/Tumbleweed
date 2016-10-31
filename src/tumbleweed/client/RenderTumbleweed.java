@@ -15,7 +15,10 @@ import java.nio.FloatBuffer;
 
 public class RenderTumbleweed extends Render<EntityTumbleweed>
 {
-	private static final ResourceLocation texture = new ResourceLocation("tumbleweed", "textures/entity/tumbleweed.png");
+	private static final ResourceLocation TEXTURE = new ResourceLocation("tumbleweed", "textures/entity/tumbleweed.png");
+	private static final FloatBuffer BUF_FLOAT_16 = BufferUtils.createFloatBuffer(16);
+	private static final Matrix4f MATRIX = new Matrix4f();
+	public static final Quaternion CURRENT = new Quaternion();
 
 	private ModelTumbleweed tumbleweed;
 	private int lastV = 0;
@@ -23,6 +26,8 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 	public RenderTumbleweed(RenderManager manager)
 	{
 		super(manager);
+		this.shadowSize = 0.4f;
+		this.shadowOpaque = 0.8f;
 		this.tumbleweed = new ModelTumbleweed();
 		this.lastV = this.tumbleweed.getV();
 	}
@@ -52,15 +57,19 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 		GlStateManager.color(1.0f, 1.0f, 1.0f, alpha);
 		GlStateManager.translate((float) x, (float) y + 0.25F, (float) z);
 
-		FloatBuffer buffer = BufferUtils.createFloatBuffer(4 * 4);
-		toMatrix(slerp(entity.prevQuat, entity.quat, partialTicks)).store(buffer);
-		buffer.flip();
-		GlStateManager.multMatrix(buffer);
+		BUF_FLOAT_16.clear();
+		toMatrix(lerp(entity.prevQuat, entity.quat, partialTicks)).store(BUF_FLOAT_16);
+		BUF_FLOAT_16.flip();
+		GlStateManager.multMatrix(BUF_FLOAT_16);
 
-		float size = 1.0f + entity.getSize() * (1 / 8f);
+		GlStateManager.rotate(entity.rot1, 1, 0, 0);
+		GlStateManager.rotate(entity.rot2, 0, 1, 0);
+		GlStateManager.rotate(entity.rot3, 0, 0, 1);
+
+		float size = 1.0f + entity.getSize() / 8f;
 		GlStateManager.scale(size, size, size);
 
-		this.bindTexture(texture);
+		this.bindTexture(TEXTURE);
 		this.tumbleweed.render(entity, 0, 0, 0, 0, 0, 0.0625F);
 
 		GlStateManager.disableBlend();
@@ -73,13 +82,11 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 	@Override
 	protected ResourceLocation getEntityTexture(EntityTumbleweed entity)
 	{
-		return texture;
+		return TEXTURE;
 	}
 
 	private static Matrix4f toMatrix(Quaternion quat)
 	{
-		Matrix4f matrix = new Matrix4f();
-
 		final float xx = quat.x * quat.x;
 		final float xy = quat.x * quat.y;
 		final float xz = quat.x * quat.z;
@@ -90,29 +97,29 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 		final float zz = quat.z * quat.z;
 		final float zw = quat.z * quat.w;
 
-		matrix.m00 = 1 - 2 * (yy + zz);
-		matrix.m10 = 2 * (xy - zw);
-		matrix.m20 = 2 * (xz + yw);
-		matrix.m30 = 0;
-		matrix.m01 = 2 * (xy + zw);
-		matrix.m11 = 1 - 2 * (xx + zz);
-		matrix.m21 = 2 * (yz - xw);
-		matrix.m31 = 0;
-		matrix.m02 = 2 * (xz - yw);
-		matrix.m12 = 2 * (yz + xw);
-		matrix.m22 = 1 - 2 * (xx + yy);
-		matrix.m32 = 0;
-		matrix.m03 = 0;
-		matrix.m13 = 0;
-		matrix.m23 = 0;
-		matrix.m33 = 1;
+		MATRIX.m00 = 1f - 2f * (yy + zz);
+		MATRIX.m10 = 2f * (xy - zw);
+		MATRIX.m20 = 2f * (xz + yw);
+		MATRIX.m30 = 0f;
+		MATRIX.m01 = 2f * (xy + zw);
+		MATRIX.m11 = 1f - 2f * (xx + zz);
+		MATRIX.m21 = 2f * (yz - xw);
+		MATRIX.m31 = 0f;
+		MATRIX.m02 = 2f * (xz - yw);
+		MATRIX.m12 = 2f * (yz + xw);
+		MATRIX.m22 = 1f - 2f * (xx + yy);
+		MATRIX.m32 = 0f;
+		MATRIX.m03 = 0f;
+		MATRIX.m13 = 0f;
+		MATRIX.m23 = 0f;
+		MATRIX.m33 = 1f;
 
-		matrix.transpose();
+		MATRIX.transpose();
 
-		return matrix;
+		return MATRIX;
 	}
 
-	private static Quaternion slerp(Quaternion start, Quaternion end, float alpha)
+	private static Quaternion lerp(Quaternion start, Quaternion end, float alpha)
 	{
 		Quaternion result = new Quaternion();
 		final float d = start.x * end.x + start.y * end.y + start.z * end.z + start.w * end.w;

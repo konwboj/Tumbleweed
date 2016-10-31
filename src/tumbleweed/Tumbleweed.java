@@ -12,15 +12,9 @@ import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import tumbleweed.common.CommonEventHandler;
-import tumbleweed.common.CommonProxy;
-import tumbleweed.common.Config;
-import tumbleweed.common.EntityTumbleweed;
-import tumbleweed.common.MessageFade;
-import tumbleweed.common.MessageWind;
-import tumbleweed.common.References;
+import tumbleweed.common.*;
 
-@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.8.9]")
+@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.9.4, 1.10.2]")
 public class Tumbleweed
 {
 	@Mod.Instance(References.MOD_ID)
@@ -30,8 +24,8 @@ public class Tumbleweed
 	public static CommonProxy proxy;
 
 	public static SimpleNetworkWrapper network;
-	public static float windX = 0.08f;
-	public static float windZ = -0.08f;
+	public static float windX = 0.07f;
+	public static float windZ = -0.07f;
 	public static Logger logger = LogManager.getLogger(References.MOD_ID);
 
 	@Mod.EventHandler
@@ -53,7 +47,7 @@ public class Tumbleweed
 	@Mod.EventHandler
 	public static void init(FMLInitializationEvent event)
 	{
-		EntityRegistry.registerModEntity(EntityTumbleweed.class, "Tumbleweed", 0, Tumbleweed.instance, 64, 20, true);
+		EntityRegistry.registerModEntity(EntityTumbleweed.class, "Tumbleweed", 0, Tumbleweed.instance, 80, 4, true);
 		MinecraftForge.EVENT_BUS.register(new CommonEventHandler());
 	}
 

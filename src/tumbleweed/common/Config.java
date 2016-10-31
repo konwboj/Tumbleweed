@@ -37,7 +37,7 @@ public class Config
 		weightedItems.clear();
 
 		Property itemConfig = config.get(Configuration.CATEGORY_GENERAL, "Drops", defaults);
-		itemConfig.comment = "These items will drop from tumbleweed upon destroying.\nThe first number is entry weight and the string is item name.";
+		itemConfig.setComment("These items will drop from tumbleweed upon destroying.\nThe first number is entry weight and the string is item name.");
 		if (itemConfig.isList())
 		{
 			String[] items = itemConfig.getStringList();
@@ -47,7 +47,7 @@ public class Config
 				if (digitsOnly.matcher(s).matches())
 				{
 					int id = Integer.parseInt(s);
-					Tumbleweed.logger.log(Level.WARN, String.format("MagicClover: Item ids are not supported (%s).", id));
+					Tumbleweed.logger.log(Level.WARN, String.format("Tumbleweed: Item ids are not supported (%s).", id));
 				} else
 				{
 					String[] itemData = s.split(" ");
