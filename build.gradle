@@ -13,7 +13,7 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.forge'
 
 version = "1.10-0.3"
-group= "konwboj.tumbleweed"
+group = "net.konwboy.tumbleweed"
 archivesBaseName = "tumbleweed"
 
 minecraft {
@@ -22,15 +22,6 @@ minecraft {
 	replace "@VERSION@", project.version
 	replaceIn "Tumbleweed.java"
 	makeObfSourceJar = false
-}
-
-sourceSets
-{
-    main
-    {
-        java { srcDirs = ["$projectDir/src"] }
-        resources { srcDirs = ["$projectDir/res"] }
-    }
 }
 
 processResources

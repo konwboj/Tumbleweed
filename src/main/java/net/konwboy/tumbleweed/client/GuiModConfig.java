@@ -1,11 +1,11 @@
-package tumbleweed.client;
+package net.konwboy.tumbleweed.client;
 
+import net.konwboy.tumbleweed.common.Config;
+import net.konwboy.tumbleweed.common.References;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraftforge.common.config.ConfigElement;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.client.config.GuiConfig;
-import tumbleweed.common.Config;
-import tumbleweed.common.References;
 
 public class GuiModConfig extends GuiConfig
 {

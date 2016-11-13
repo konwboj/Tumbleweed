@@ -1,4 +1,4 @@
-package tumbleweed.client;
+package net.konwboy.tumbleweed.client;
 
 import com.google.common.collect.Lists;
 import net.minecraft.client.model.ModelBase;

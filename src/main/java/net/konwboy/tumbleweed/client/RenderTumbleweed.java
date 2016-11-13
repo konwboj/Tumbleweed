@@ -1,5 +1,6 @@
-package tumbleweed.client;
+package net.konwboy.tumbleweed.client;
 
+import net.konwboy.tumbleweed.common.EntityTumbleweed;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
@@ -9,7 +10,6 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Quaternion;
-import tumbleweed.common.EntityTumbleweed;
 
 import java.nio.FloatBuffer;
 

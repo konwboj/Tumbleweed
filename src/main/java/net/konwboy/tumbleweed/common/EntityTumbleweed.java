@@ -1,6 +1,8 @@
-package tumbleweed.common;
+package net.konwboy.tumbleweed.common;
 
 import com.google.common.base.Predicate;
+import net.konwboy.tumbleweed.Tumbleweed;
+import net.konwboy.tumbleweed.client.RenderTumbleweed;
 import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -27,8 +29,6 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Vector4f;
-import tumbleweed.Tumbleweed;
-import tumbleweed.client.RenderTumbleweed;
 
 import java.util.List;
 

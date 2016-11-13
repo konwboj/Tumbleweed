@@ -1,4 +1,4 @@
-package tumbleweed.client;
+package net.konwboy.tumbleweed.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;

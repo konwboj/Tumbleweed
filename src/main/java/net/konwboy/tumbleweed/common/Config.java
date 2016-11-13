@@ -1,6 +1,7 @@
-package tumbleweed.common;
+package net.konwboy.tumbleweed.common;
 
 import com.google.common.collect.Lists;
+import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -8,7 +9,6 @@ import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
 import net.minecraftforge.fml.common.registry.GameData;
 import org.apache.logging.log4j.Level;
-import tumbleweed.Tumbleweed;
 
 import java.io.File;
 import java.util.List;

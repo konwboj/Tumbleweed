@@ -1,8 +1,8 @@
-package tumbleweed.client;
+package net.konwboy.tumbleweed.client;
 
+import net.konwboy.tumbleweed.common.CommonProxy;
+import net.konwboy.tumbleweed.common.EntityTumbleweed;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
-import tumbleweed.common.CommonProxy;
-import tumbleweed.common.EntityTumbleweed;
 
 public class ClientProxy extends CommonProxy
 {

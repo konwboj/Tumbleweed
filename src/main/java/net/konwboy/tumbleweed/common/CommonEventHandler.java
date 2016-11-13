@@ -1,6 +1,7 @@
-package tumbleweed.common;
+package net.konwboy.tumbleweed.common;
 
 import com.google.common.collect.Sets;
+import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -16,7 +17,6 @@ import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
-import tumbleweed.Tumbleweed;
 
 import java.util.Set;
 

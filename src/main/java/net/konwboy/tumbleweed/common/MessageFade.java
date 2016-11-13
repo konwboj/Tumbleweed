@@ -1,4 +1,4 @@
-package tumbleweed.common;
+package net.konwboy.tumbleweed.common;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
