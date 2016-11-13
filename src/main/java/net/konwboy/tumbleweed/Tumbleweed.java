@@ -20,7 +20,7 @@ public class Tumbleweed
 	@Mod.Instance(References.MOD_ID)
 	public static Tumbleweed instance;
 
-	@SidedProxy(clientSide = "tumbleweed.client.ClientProxy", serverSide = "tumbleweed.common.CommonProxy")
+	@SidedProxy(clientSide = References.CLIENT_PROXY, serverSide = References.COMMON_PROXY)
 	public static CommonProxy proxy;
 
 	public static SimpleNetworkWrapper network;
