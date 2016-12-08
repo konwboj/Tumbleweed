@@ -7,7 +7,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 
-public class MessageWind implements IMessage
+public class MessageWind implements IMessage, IMessageHandler<MessageWind, IMessage>
 {
 	private float windX;
 	private float windZ;
@@ -36,18 +36,15 @@ public class MessageWind implements IMessage
 		buf.writeFloat(this.windZ);
 	}
 
-	public static class Handler implements IMessageHandler<MessageWind, IMessage>
+	@Override
+	public IMessage onMessage(final MessageWind message, final MessageContext ctx)
 	{
-		@Override
-		public IMessage onMessage(final MessageWind message, final MessageContext ctx)
+		if (ctx.side == Side.CLIENT)
 		{
-			if (ctx.side == Side.CLIENT)
-			{
-				Tumbleweed.windX = message.windX;
-				Tumbleweed.windZ = message.windZ;
-			}
-
-			return null;
+			Tumbleweed.windX = message.windX;
+			Tumbleweed.windZ = message.windZ;
 		}
+
+		return null;
 	}
 }

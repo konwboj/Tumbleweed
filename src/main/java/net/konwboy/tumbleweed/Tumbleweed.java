@@ -35,11 +35,11 @@ public class Tumbleweed
 
 		network = NetworkRegistry.INSTANCE.newSimpleChannel("Tumbleweed");
 
-		network.registerMessage(MessageWind.Handler.class, MessageWind.class, 0, Side.CLIENT);
-		network.registerMessage(MessageWind.Handler.class, MessageWind.class, 0, Side.SERVER);
+		network.registerMessage(MessageWind.class, MessageWind.class, 0, Side.CLIENT);
+		network.registerMessage(MessageWind.class, MessageWind.class, 0, Side.SERVER);
 
-		network.registerMessage(MessageFade.Handler.class, MessageFade.class, 1, Side.CLIENT);
-		network.registerMessage(MessageFade.Handler.class, MessageFade.class, 1, Side.SERVER);
+		network.registerMessage(MessageFade.class, MessageFade.class, 1, Side.CLIENT);
+		network.registerMessage(MessageFade.class, MessageFade.class, 1, Side.SERVER);
 
 		proxy.initClient();
 	}

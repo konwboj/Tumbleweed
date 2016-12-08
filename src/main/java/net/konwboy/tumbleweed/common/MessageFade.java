@@ -8,7 +8,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 
-public class MessageFade implements IMessage
+public class MessageFade implements IMessage, IMessageHandler<MessageFade, IMessage>
 {
 	private int eid;
 
@@ -33,19 +33,16 @@ public class MessageFade implements IMessage
 		buf.writeInt(this.eid);
 	}
 
-	public static class Handler implements IMessageHandler<MessageFade, IMessage>
+	@Override
+	public IMessage onMessage(final MessageFade message, final MessageContext ctx)
 	{
-		@Override
-		public IMessage onMessage(final MessageFade message, final MessageContext ctx)
+		if (ctx.side == Side.CLIENT)
 		{
-			if (ctx.side == Side.CLIENT)
-			{
-				Entity entity = Minecraft.getMinecraft().theWorld.getEntityByID(message.eid);
-				if (entity != null && entity instanceof EntityTumbleweed)
-					((EntityTumbleweed) entity).startFading();
-			}
-
-			return null;
+			Entity entity = Minecraft.getMinecraft().theWorld.getEntityByID(message.eid);
+			if (entity != null && entity instanceof EntityTumbleweed)
+				((EntityTumbleweed) entity).startFading();
 		}
+
+		return null;
 	}
 }

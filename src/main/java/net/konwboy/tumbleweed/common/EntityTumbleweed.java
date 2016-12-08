@@ -352,8 +352,6 @@ public class EntityTumbleweed extends Entity
 
 			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(0.0D, 0.0D, z));
 
-			this.worldObj.theProfiler.endSection();
-			this.worldObj.theProfiler.startSection("rest");
 			this.resetPositionToBB();
 			this.isCollidedHorizontally = d3 != x || d5 != z;
 			this.isCollidedVertically = d4 != y;
@@ -446,8 +444,6 @@ public class EntityTumbleweed extends Entity
 				this.addEntityCrashInfo(crashreportcategory);
 				throw new ReportedException(crashreport);
 			}
-
-			this.worldObj.theProfiler.endSection();
 		}
 	}
 
