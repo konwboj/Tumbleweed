@@ -125,7 +125,7 @@ public class CommonEventHandler
 
 					if (!world.isAnyPlayerWithinRangeAt((double) x, (double) y, (double) z, 24.0D) && spawnPoint.distanceSq((double) x, (double) y, (double) z) >= 24.0 * 24.0)
 					{
-						Biome biome = world.getBiomeGenForCoords(deadBush);
+						Biome biome = world.getBiome(deadBush);
 						if (biome.getTemperature() > 1.8f && biome.getRainfall() == 0f)
 						{
 							EntityTumbleweed entity = new EntityTumbleweed(world);

@@ -1,6 +1,7 @@
 package net.konwboy.tumbleweed.client;
 
 import net.konwboy.tumbleweed.common.EntityTumbleweed;
+import net.konwboy.tumbleweed.common.References;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
@@ -15,7 +16,7 @@ import java.nio.FloatBuffer;
 
 public class RenderTumbleweed extends Render<EntityTumbleweed>
 {
-	private static final ResourceLocation TEXTURE = new ResourceLocation("tumbleweed", "textures/entity/tumbleweed.png");
+	private static final ResourceLocation TEXTURE = new ResourceLocation(References.MOD_ID, "textures/entity/tumbleweed.png");
 	private static final FloatBuffer BUF_FLOAT_16 = BufferUtils.createFloatBuffer(16);
 	private static final Matrix4f MATRIX = new Matrix4f();
 	public static final Quaternion CURRENT = new Quaternion();

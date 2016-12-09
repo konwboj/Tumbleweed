@@ -9,6 +9,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.MoverType;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.item.EntityMinecart;
 import net.minecraft.entity.player.EntityPlayer;
@@ -161,7 +162,7 @@ public class EntityTumbleweed extends Entity
 			double z = this.motionZ;
 
 			boolean ground = onGround;
-			this.moveEntity(this.motionX, this.motionY, this.motionZ);
+			this.moveEntity(MoverType.SELF, this.motionX, this.motionY, this.motionZ);
 
 			float windX = getCustomWindEnabled() ? getCustomWindX() : Tumbleweed.windX * windModX;
 			float windZ = getCustomWindEnabled() ? getCustomWindZ() : Tumbleweed.windZ * windModZ;
@@ -308,7 +309,7 @@ public class EntityTumbleweed extends Entity
 	}
 
 	@Override
-	public void moveEntity(double x, double y, double z)
+	public void moveEntity(MoverType mover, double x, double y, double z)
 	{
 		if (this.noClip)
 		{

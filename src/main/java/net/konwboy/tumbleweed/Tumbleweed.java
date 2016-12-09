@@ -1,6 +1,7 @@
 package net.konwboy.tumbleweed;
 
 import net.konwboy.tumbleweed.common.*;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.SidedProxy;
@@ -14,7 +15,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.9.4, 1.10.2]")
+@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.11]")
 public class Tumbleweed
 {
 	@Mod.Instance(References.MOD_ID)
@@ -47,7 +48,7 @@ public class Tumbleweed
 	@Mod.EventHandler
 	public static void init(FMLInitializationEvent event)
 	{
-		EntityRegistry.registerModEntity(EntityTumbleweed.class, "Tumbleweed", 0, Tumbleweed.instance, 80, 4, true);
+		EntityRegistry.registerModEntity(new ResourceLocation(References.MOD_ID, "tumbleweed"), EntityTumbleweed.class, "Tumbleweed", 0, Tumbleweed.instance, 80, 4, true);
 		MinecraftForge.EVENT_BUS.register(new CommonEventHandler());
 	}
 
