@@ -14,8 +14,8 @@ import org.lwjgl.util.vector.Quaternion;
 
 import java.nio.FloatBuffer;
 
-public class RenderTumbleweed extends Render<EntityTumbleweed>
-{
+public class RenderTumbleweed extends Render<EntityTumbleweed> {
+
 	private static final ResourceLocation TEXTURE = new ResourceLocation(References.MOD_ID, "textures/entity/tumbleweed.png");
 	private static final FloatBuffer BUF_FLOAT_16 = BufferUtils.createFloatBuffer(16);
 	private static final Matrix4f MATRIX = new Matrix4f();
@@ -24,8 +24,7 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 	private ModelTumbleweed tumbleweed;
 	private int lastV = 0;
 
-	public RenderTumbleweed(RenderManager manager)
-	{
+	public RenderTumbleweed(RenderManager manager) {
 		super(manager);
 		this.shadowSize = 0.4f;
 		this.shadowOpaque = 0.8f;
@@ -34,10 +33,8 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 	}
 
 	@Override
-	public void doRender(EntityTumbleweed entity, double x, double y, double z, float p_76986_8_, float partialTicks)
-	{
-		if (lastV != tumbleweed.getV())
-		{
+	public void doRender(EntityTumbleweed entity, double x, double y, double z, float p_76986_8_, float partialTicks) {
+		if (lastV != tumbleweed.getV()) {
 			this.tumbleweed = new ModelTumbleweed();
 			this.lastV = tumbleweed.getV();
 		}
@@ -81,13 +78,11 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 	}
 
 	@Override
-	protected ResourceLocation getEntityTexture(EntityTumbleweed entity)
-	{
+	protected ResourceLocation getEntityTexture(EntityTumbleweed entity) {
 		return TEXTURE;
 	}
 
-	private static Matrix4f toMatrix(Quaternion quat)
-	{
+	private static Matrix4f toMatrix(Quaternion quat) {
 		final float xx = quat.x * quat.x;
 		final float xy = quat.x * quat.y;
 		final float xz = quat.x * quat.z;
@@ -120,8 +115,7 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 		return MATRIX;
 	}
 
-	private static Quaternion lerp(Quaternion start, Quaternion end, float alpha)
-	{
+	private static Quaternion lerp(Quaternion start, Quaternion end, float alpha) {
 		Quaternion result = new Quaternion();
 		final float d = start.x * end.x + start.y * end.y + start.z * end.z + start.w * end.w;
 		float absDot = d < 0.f ? -d : d;
@@ -129,8 +123,7 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 		float scale0 = 1f - alpha;
 		float scale1 = alpha;
 
-		if ((1 - absDot) > 0.1)
-		{
+		if ((1 - absDot) > 0.1) {
 			final float angle = (float) Math.acos(absDot);
 			final float invSinTheta = 1f / (float) Math.sin(angle);
 
@@ -149,11 +142,10 @@ public class RenderTumbleweed extends Render<EntityTumbleweed>
 		return result;
 	}
 
-	public static class Factory implements IRenderFactory<EntityTumbleweed>
-	{
+	public static class Factory implements IRenderFactory<EntityTumbleweed> {
+
 		@Override
-		public Render<? super EntityTumbleweed> createRenderFor(RenderManager manager)
-		{
+		public Render<? super EntityTumbleweed> createRenderFor(RenderManager manager) {
 			return new RenderTumbleweed(manager);
 		}
 	}

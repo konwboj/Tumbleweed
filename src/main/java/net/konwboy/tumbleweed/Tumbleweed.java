@@ -15,9 +15,9 @@ import net.minecraftforge.fml.relauncher.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.11]")
-public class Tumbleweed
-{
+@Mod(modid = References.MOD_ID, name = References.MOD_NAME, version = "@VERSION@", useMetadata = true, guiFactory = References.GUI_FACTORY, acceptedMinecraftVersions = "[1.11,1.12]")
+public class Tumbleweed {
+
 	@Mod.Instance(References.MOD_ID)
 	public static Tumbleweed instance;
 
@@ -30,30 +30,24 @@ public class Tumbleweed
 	public static Logger logger = LogManager.getLogger(References.MOD_ID);
 
 	@Mod.EventHandler
-	public static void preInit(FMLPreInitializationEvent event)
-	{
+	public static void preInit(FMLPreInitializationEvent event) {
 		Config.init(event.getSuggestedConfigurationFile());
 
 		network = NetworkRegistry.INSTANCE.newSimpleChannel("Tumbleweed");
 
 		network.registerMessage(MessageWind.class, MessageWind.class, 0, Side.CLIENT);
-		network.registerMessage(MessageWind.class, MessageWind.class, 0, Side.SERVER);
-
 		network.registerMessage(MessageFade.class, MessageFade.class, 1, Side.CLIENT);
-		network.registerMessage(MessageFade.class, MessageFade.class, 1, Side.SERVER);
 
 		proxy.initClient();
 	}
 
 	@Mod.EventHandler
-	public static void init(FMLInitializationEvent event)
-	{
+	public static void init(FMLInitializationEvent event) {
 		EntityRegistry.registerModEntity(new ResourceLocation(References.MOD_ID, "tumbleweed"), EntityTumbleweed.class, "Tumbleweed", 0, Tumbleweed.instance, 80, 4, true);
 		MinecraftForge.EVENT_BUS.register(new CommonEventHandler());
 	}
 
 	@Mod.EventHandler
-	public static void postInit(FMLPostInitializationEvent event)
-	{
+	public static void postInit(FMLPostInitializationEvent event) {
 	}
 }

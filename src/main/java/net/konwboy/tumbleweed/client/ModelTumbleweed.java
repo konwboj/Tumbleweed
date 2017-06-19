@@ -7,12 +7,11 @@ import net.minecraft.entity.Entity;
 
 import java.util.List;
 
-public class ModelTumbleweed extends ModelBase
-{
+public class ModelTumbleweed extends ModelBase {
+
 	public List<ModelRenderer> boxes;
 
-	public ModelTumbleweed()
-	{
+	public ModelTumbleweed() {
 		this.textureHeight = 16;
 		this.textureWidth = 16;
 
@@ -52,14 +51,12 @@ public class ModelTumbleweed extends ModelBase
 	}
 
 	@Override
-	public void render(Entity entity, float data1, float data2, float data3, float data4, float data5, float scale)
-	{
+	public void render(Entity entity, float data1, float data2, float data3, float data4, float data5, float scale) {
 		for (ModelRenderer box : boxes)
 			box.render(scale);
 	}
 
-	public int getV()
-	{
+	public int getV() {
 		return 45;
 	}
 }
