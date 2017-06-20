@@ -17,15 +17,17 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
+import java.util.Random;
 import java.util.Set;
 
 public class CommonEventHandler {
 
+	private static final Random RAND = new Random();
 	private static final int TRY_SPAWN_TICKS = 10 * 20;
 	private static final int CHANGE_WIND_TICKS = 2 * 60 * 20;
 	private static final int MOB_COUNT_DIV = 17 * 17;
 
-	private int ticks;
+	private int serverTicks;
 
 	@SubscribeEvent
 	public void onTick(TickEvent.WorldTickEvent event) {
@@ -34,20 +36,26 @@ public class CommonEventHandler {
 		if (event.phase != TickEvent.Phase.END)
 			return;
 
-		if (this.ticks % TRY_SPAWN_TICKS == 0)
+		if (world.getTotalWorldTime() % TRY_SPAWN_TICKS == 0)
 			trySpawn(world);
+	}
 
-		if (ticks % CHANGE_WIND_TICKS == 0) {
-			if (world.rand.nextBoolean())
+	@SubscribeEvent
+	public void onTick(TickEvent.ServerTickEvent event) {
+		if (event.phase != TickEvent.Phase.END)
+			return;
+
+		if (serverTicks % CHANGE_WIND_TICKS == 0) {
+			if (RAND.nextBoolean())
 				Tumbleweed.windX *= -1;
 
-			if (world.rand.nextBoolean())
+			if (RAND.nextBoolean())
 				Tumbleweed.windZ *= -1;
 
 			Tumbleweed.network.sendToAll(new MessageWind(Tumbleweed.windX, Tumbleweed.windZ));
 		}
 
-		this.ticks++;
+		this.serverTicks++;
 	}
 
 	@SubscribeEvent

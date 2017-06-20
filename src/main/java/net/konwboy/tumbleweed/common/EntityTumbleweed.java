@@ -34,12 +34,16 @@ import java.util.List;
 
 public class EntityTumbleweed extends Entity {
 
+	private static final int FADE_AFTER = 2 * 60 * 20;
+	public static final int MAX_FADE = 4 * 20;
+	private static final int DESPAWN_RANGE = 110;
+	private static final float BASE_SIZE = 0.75f;
+
 	private static final DataParameter<Integer> SIZE = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.VARINT);
 	private static final DataParameter<Boolean> CUSTOM_WIND_ENABLED = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.BOOLEAN);
 	private static final DataParameter<Float> CUSTOM_WIND_X = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.FLOAT);
 	private static final DataParameter<Float> CUSTOM_WIND_Z = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.FLOAT);
 	private static final DataParameter<Boolean> CAN_DESPAWN = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.BOOLEAN);
-	private static final float BASE_SIZE = 0.75f;
 
 	private int age;
 	public int fadeAge;
@@ -140,137 +144,132 @@ public class EntityTumbleweed extends Entity {
 			this.motionX = 0;
 			this.motionY = 0;
 			this.motionZ = 0;
-		} else {
-			if (!this.isInWater())
-				this.motionY -= 0.012;
+			return;
+		}
 
-			double x = this.motionX;
-			double y = this.motionY;
-			double z = this.motionZ;
+		if (!this.isInWater())
+			this.motionY -= 0.012;
 
-			boolean ground = onGround;
-			this.moveEntity(this.motionX, this.motionY, this.motionZ);
+		double x = this.motionX;
+		double y = this.motionY;
+		double z = this.motionZ;
 
-			float windX = getCustomWindEnabled() ? getCustomWindX() : Tumbleweed.windX * windModX;
-			float windZ = getCustomWindEnabled() ? getCustomWindZ() : Tumbleweed.windZ * windModZ;
-			if (this.isInWater()) {
-				this.motionY += 0.02;
-				this.motionX *= 0.95;
-				this.motionZ *= 0.95;
-			} else if (windX != 0 || windZ != 0) {
-				this.motionX = windX;
-				this.motionZ = windZ;
-			}
+		boolean ground = onGround;
+		this.moveEntity(this.motionX, this.motionY, this.motionZ);
 
-			// Rotate
-			if (this.worldObj.isRemote) {
-				groundTicks--;
+		float windX = getCustomWindEnabled() ? getCustomWindX() : Tumbleweed.windX * windModX;
+		float windZ = getCustomWindEnabled() ? getCustomWindZ() : Tumbleweed.windZ * windModZ;
+		if (this.isInWater()) {
+			this.motionY += 0.02;
+			this.motionX *= 0.95;
+			this.motionZ *= 0.95;
+		} else if (windX != 0 || windZ != 0) {
+			this.motionX = windX;
+			this.motionZ = windZ;
+		}
 
-				if ((!ground && onGround) || isInWater())
-					groundTicks = 10;
-				else if (getCustomWindEnabled())
-					groundTicks = 5;
+		// Rotate
+		if (this.worldObj.isRemote) {
+			groundTicks--;
 
-				double div = 5d * size - groundTicks / 5d;
-				double rotX = 2d * Math.PI * this.motionX / div;
-				double rotZ = -2d * Math.PI * this.motionZ / div;
+			if ((!ground && onGround) || isInWater())
+				groundTicks = 10;
+			else if (getCustomWindEnabled())
+				groundTicks = 5;
 
-				this.prevQuat = this.quat;
-				RenderTumbleweed.CURRENT.setFromAxisAngle((new Vector4f(1, 0, 0, (float) rotZ)));
-				Quaternion.mul(this.quat, RenderTumbleweed.CURRENT, this.quat);
-				RenderTumbleweed.CURRENT.setFromAxisAngle((new Vector4f(0, 0, 1, (float) rotX)));
-				Quaternion.mul(this.quat, RenderTumbleweed.CURRENT, this.quat);
-			}
+			double div = 5d * size - groundTicks / 5d;
+			double rotX = 2d * Math.PI * this.motionX / div;
+			double rotZ = -2d * Math.PI * this.motionZ / div;
 
-			// Bounce on ground
-			if (this.onGround) {
-				if (Math.abs(windX) >= 0.05 || Math.abs(windZ) >= 0.05)
-					this.motionY = Math.max(-y * 0.7, 0.24 - getSize() * 0.02);
-				else
-					this.motionY = -y * 0.7;
-			}
+			this.prevQuat = this.quat;
+			RenderTumbleweed.CURRENT.setFromAxisAngle((new Vector4f(1, 0, 0, (float) rotZ)));
+			Quaternion.mul(this.quat, RenderTumbleweed.CURRENT, this.quat);
+			RenderTumbleweed.CURRENT.setFromAxisAngle((new Vector4f(0, 0, 1, (float) rotX)));
+			Quaternion.mul(this.quat, RenderTumbleweed.CURRENT, this.quat);
+		}
 
-			// Bounce on walls
-			if (this.isCollidedHorizontally) {
-				this.motionX = -x * 0.4;
-				this.motionZ = -z * 0.4;
-			}
+		// Bounce on ground
+		if (this.onGround) {
+			if (Math.abs(windX) >= 0.05 || Math.abs(windZ) >= 0.05)
+				this.motionY = Math.max(-y * 0.7, 0.24 - getSize() * 0.02);
+			else
+				this.motionY = -y * 0.7;
+		}
 
-			this.motionX *= 0.98;
-			this.motionY *= 0.98;
-			this.motionZ *= 0.98;
+		// Bounce on walls
+		if (this.isCollidedHorizontally) {
+			this.motionX = -x * 0.4;
+			this.motionZ = -z * 0.4;
+		}
 
-			if (Math.abs(this.motionX) < 0.005)
-				this.motionX = 0.0;
+		this.motionX *= 0.98;
+		this.motionY *= 0.98;
+		this.motionZ *= 0.98;
 
-			if (Math.abs(this.motionY) < 0.005)
-				this.motionY = 0.0;
+		if (Math.abs(this.motionX) < 0.005)
+			this.motionX = 0.0;
 
-			if (Math.abs(this.motionZ) < 0.005)
-				this.motionZ = 0.0;
+		if (Math.abs(this.motionY) < 0.005)
+			this.motionY = 0.0;
 
-			collideWithNearbyEntities();
+		if (Math.abs(this.motionZ) < 0.005)
+			this.motionZ = 0.0;
 
-			if (!this.worldObj.isRemote) {
-				this.age++;
-				despawnEntity();
-			}
+		collideWithNearbyEntities();
 
-			if (this.fadeAge > 0) {
-				this.fadeAge++;
+		if (!this.worldObj.isRemote) {
+			this.age++;
+			despawnEntity();
+		}
 
-				if (this.fadeAge > 4 * 20)
-					setDead();
-			}
+		if (this.fadeAge > 0) {
+			this.fadeAge++;
+
+			if (this.fadeAge > MAX_FADE)
+				setDead();
 		}
 	}
 
 	private void despawnEntity() {
 		if (!getCanDespawn()) {
 			this.age = 0;
-		} else {
-			Entity entity = this.worldObj.getClosestPlayerToEntity(this, -1.0D);
-
-			if (entity != null) {
-				double d0 = entity.posX - this.posX;
-				double d1 = entity.posY - this.posY;
-				double d2 = entity.posZ - this.posZ;
-				double d3 = d0 * d0 + d1 * d1 + d2 * d2;
-
-				if (d3 > 110 * 110)
-					this.setDead();
-			}
-
-			if (this.age > 2 * 60 * 20 && this.fadeAge == 0)
-				this.startFading();
+			return;
 		}
+
+		Entity entity = this.worldObj.getClosestPlayerToEntity(this, DESPAWN_RANGE);
+		if (entity == null)
+			this.setDead();
+
+		if (this.age > FADE_AFTER)
+			this.startFading();
 	}
 
 	@Override
 	public boolean attackEntityFrom(DamageSource source, float amount) {
 		if (this.isEntityInvulnerable(source)) {
 			return false;
-		} else {
-			if (!this.isDead && !this.worldObj.isRemote) {
-				this.setDead();
-				this.setBeenAttacked();
-
-				SoundType sound = SoundType.PLANT;
-				this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
-
-				ItemStack item = Config.getRandomItem();
-				if (item != null) {
-					EntityItem entityitem = new EntityItem(this.worldObj, this.posX, this.posY, this.posZ, item);
-					entityitem.motionX = 0;
-					entityitem.motionY = 0.2D;
-					entityitem.motionZ = 0;
-					entityitem.setDefaultPickupDelay();
-					this.worldObj.spawnEntityInWorld(entityitem);
-				}
-			}
-
-			return true;
 		}
+
+		if (!this.isDead && !this.worldObj.isRemote) {
+			this.setDead();
+			this.setBeenAttacked();
+
+			SoundType sound = SoundType.PLANT;
+			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
+
+			ItemStack item = Config.getRandomItem();
+			if (item != null) {
+				EntityItem entityitem = new EntityItem(this.worldObj, this.posX, this.posY, this.posZ, item);
+				entityitem.motionX = 0;
+				entityitem.motionY = 0.2D;
+				entityitem.motionZ = 0;
+				entityitem.setDefaultPickupDelay();
+				this.worldObj.spawnEntityInWorld(entityitem);
+			}
+		}
+
+		return true;
+
 	}
 
 	@Override
@@ -462,17 +461,21 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	public void startFading() {
+		if (this.fadeAge > 0)
+			return;
+
 		this.fadeAge = 1;
 
 		if (!this.worldObj.isRemote)
 			if (!this.isDead)
 				for (EntityPlayer other : this.worldObj.playerEntities)
 					if (other != null && other.worldObj == this.worldObj) {
-						double d0 = this.posX - other.posX;
-						double d1 = this.posY - other.posY;
-						double d2 = this.posZ - other.posZ;
+						double dx = this.posX - other.posX;
+						double dy = this.posY - other.posY;
+						double dz = this.posZ - other.posZ;
+						double distance = dx * dx + dy * dy + dz * dz;
 
-						if (d0 * d0 + d1 * d1 + d2 * d2 < 64D * 64D)
+						if (distance < 64D * 64D)
 							Tumbleweed.network.sendTo(new MessageFade(this.getEntityId()), (EntityPlayerMP) other);
 					}
 	}
