@@ -46,9 +46,8 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
 		float alpha = 0.7f;
-		float ageFade = 4f * 20f;
 		if (entity.fadeAge > 1)
-			alpha -= entity.fadeAge / ageFade;
+			alpha -= entity.fadeAge / (float) EntityTumbleweed.MAX_FADE;
 		if (alpha < 0.0)
 			alpha = 0f;
 
