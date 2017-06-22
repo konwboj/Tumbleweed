@@ -1,5 +1,6 @@
 buildscript {
     repositories {
+        mavenCentral()
         jcenter()
         maven {
             name = "forge"
@@ -10,9 +11,14 @@ buildscript {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.2-SNAPSHOT'
     }
 }
+
+plugins {
+    id 'net.franz-becker.gradle-lombok' version '1.5'
+}
+
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.11-0.4.1"
+version = "1.11-0.4.2"
 group = "net.konwboy.tumbleweed"
 archivesBaseName = "tumbleweed"
 
@@ -24,17 +30,27 @@ minecraft {
     makeObfSourceJar = false
 }
 
-processResources
-        {
-            inputs.property "version", project.version
-            inputs.property "mcversion", project.minecraft.version
+lombok {
+    version = "1.16.8"
+    sha256 = "fe32b29b7b33eb2b19866cbc5345c59c9984a6036cc396856a04c0d09f99ea68"
+}
 
-            from(sourceSets.main.resources.srcDirs) {
-                include 'mcmod.info'
-                expand 'version': project.version, 'mcversion': project.minecraft.version
-            }
+import net.franz_becker.gradle.lombok.task.DelombokTask
 
-            from(sourceSets.main.resources.srcDirs) {
-                exclude 'mcmod.info'
-            }
-        }
+task delombok(type: DelombokTask) {
+    args("src/main/java", "-d", "build/sources/delomboked/java")
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
