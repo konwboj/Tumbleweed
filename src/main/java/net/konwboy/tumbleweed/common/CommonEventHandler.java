@@ -3,6 +3,7 @@ package net.konwboy.tumbleweed.common;
 import com.google.common.collect.Sets;
 import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.math.BlockPos;
@@ -109,9 +110,11 @@ public class CommonEventHandler {
 					for (int y = -r; y < r; y++)
 						for (int z = -r; z < r; z++) {
 							BlockPos check = new BlockPos(blockpos.getX() + x, blockpos.getY() + y, blockpos.getZ() + z);
-							Block block = world.getBlockState(check).getBlock();
+							IBlockState state = world.getBlockState(check);
+							Block block = state.getBlock();
+							Config.Metadata meta = new Config.Metadata(block.getRegistryName(), block.getMetaFromState(state));
 
-							if (Config.getSpawningBlocks().contains(block.getRegistryName()) && world.canBlockSeeSky(check)) {
+							if (Config.getSpawningBlocks().contains(meta) && world.canBlockSeeSky(check)) {
 								spawner = check;
 								break;
 							}
