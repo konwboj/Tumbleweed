@@ -46,11 +46,11 @@ public class Config {
 		totalWeight = 0;
 
 		Property itemConfig = config.get(Configuration.CATEGORY_GENERAL, "Drops", DEFAULT_DROPS);
-		itemConfig.setComment("These items will drop from tumbleweed upon destroying.\nThe first number is entry weight and the string is item name.");
+		itemConfig.setComment("These items will drop from tumbleweed upon destroying.\n<weight> <mod>:<item>:[metadata] [amount]");
 		if (itemConfig.isList()) {
 			for (String s : itemConfig.getStringList()) {
 				String[] itemData = s.split(" ");
-				if (itemData.length != 2)
+				if (itemData.length < 2)
 					continue;
 
 				double weight = Double.parseDouble(itemData[0]);
@@ -61,7 +61,15 @@ public class Config {
 					continue;
 				}
 
-				weightedItems.add(new WeightedItem(getMetadata(itemData[1]), weight));
+				int amount = 1;
+				if (itemData.length >= 3) {
+					try {
+						amount = Integer.parseInt(itemData[2]);
+					} catch (NumberFormatException ignore) {
+					}
+				}
+
+				weightedItems.add(new WeightedItem(getMetadata(itemData[1]), amount, weight));
 				totalWeight += weight;
 			}
 		}
@@ -82,7 +90,7 @@ public class Config {
 			}
 
 		Property blockConfig = config.get(Configuration.CATEGORY_GENERAL, "Spawning Blocks", DEFAULT_BLOCKS);
-		blockConfig.setComment("The blocks in which tumbleweeds can spawn in.");
+		blockConfig.setComment("The blocks in which tumbleweeds can spawn in.\n<mod>:<block>:[metadata]");
 		if (blockConfig.isList())
 			for (String entry : blockConfig.getStringList()) {
 				Metadata meta = getMetadata(entry);
@@ -107,7 +115,7 @@ public class Config {
 			if (countedWeight >= randomWeight) {
 				Item item = Item.REGISTRY.getObject(weightedItem.meta.id);
 				if (item != null)
-					return new ItemStack(item, 1, weightedItem.meta.meta);
+					return new ItemStack(item, weightedItem.amount, weightedItem.meta.meta);
 			}
 		}
 
@@ -134,7 +142,10 @@ public class Config {
 
 		int meta = 0;
 		if (split.length >= 3)
-			meta = Integer.parseInt(split[2]);
+			try {
+				meta = Integer.parseInt(split[2]);
+			} catch (NumberFormatException ignore) {
+			}
 
 		return new Metadata(new ResourceLocation(split[0], split[1]), meta);
 	}
@@ -150,6 +161,7 @@ public class Config {
 	private static class WeightedItem {
 
 		private final Metadata meta;
+		private final int amount;
 		private final double weight;
 	}
 
