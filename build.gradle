@@ -18,7 +18,7 @@ plugins {
 
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.11-0.4.3"
+version = "1.11-0.4.4"
 group = "net.konwboy.tumbleweed"
 archivesBaseName = "tumbleweed"
 
@@ -26,6 +26,7 @@ minecraft {
     version = "1.11-13.19.1.2188"
     mappings = "snapshot_20161111"
     replace "@VERSION@", project.version
+    replace "@MC_VERSIONS@", "[1.11,1.12.2]"
     replaceIn "Tumbleweed.java"
     makeObfSourceJar = false
 }
