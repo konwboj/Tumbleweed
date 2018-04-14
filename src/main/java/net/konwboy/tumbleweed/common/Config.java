@@ -33,10 +33,8 @@ public class Config {
 	private static final String[] DEFAULT_BLOCKS = { "minecraft:deadbush" };
 
 	public static void init(File file) {
-		if (config == null) {
+		if (config == null)
 			config = new Configuration(file);
-			load();
-		}
 	}
 
 	public static void load() {
@@ -75,7 +73,7 @@ public class Config {
 		}
 
 		Property chanceConfig = config.get(Configuration.CATEGORY_GENERAL, "Chance", DEFAULT_CHANCE);
-		chanceConfig.setComment("The chance of a tumbleweed spawning in a chunk.");
+		chanceConfig.setComment("Chance of a tumbleweed spawning in a chunk.");
 		spawnChance = chanceConfig.getDouble();
 
 		Property biomesConfig = config.get(Configuration.CATEGORY_GENERAL, "Biome Whitelist", new String[0]);
@@ -86,11 +84,11 @@ public class Config {
 				if (Biome.REGISTRY.containsKey(id))
 					biomeWhitelist.add(id);
 				else
-					Tumbleweed.logger.log(Level.WARN, "Biome {} doesn't exist.", id);
+					Tumbleweed.logger.log(Level.WARN, "Biome {} is invalid.", id);
 			}
 
 		Property blockConfig = config.get(Configuration.CATEGORY_GENERAL, "Spawning Blocks", DEFAULT_BLOCKS);
-		blockConfig.setComment("The blocks in which tumbleweeds can spawn in.\n<mod>:<block>:[metadata]");
+		blockConfig.setComment("Blocks from which tumbleweeds can spawn.\n<mod>:<block>:[metadata]");
 		if (blockConfig.isList())
 			for (String entry : blockConfig.getStringList()) {
 				Metadata meta = getMetadata(entry);

@@ -1,7 +1,7 @@
 package net.konwboy.tumbleweed.client;
 
+import net.konwboy.tumbleweed.Tumbleweed;
 import net.konwboy.tumbleweed.common.EntityTumbleweed;
-import net.konwboy.tumbleweed.common.References;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
@@ -16,10 +16,11 @@ import java.nio.FloatBuffer;
 
 public class RenderTumbleweed extends Render<EntityTumbleweed> {
 
-	private static final ResourceLocation TEXTURE = new ResourceLocation(References.MOD_ID, "textures/entity/tumbleweed.png");
-	private static final FloatBuffer BUF_FLOAT_16 = BufferUtils.createFloatBuffer(16);
-	private static final Matrix4f MATRIX = new Matrix4f();
-	public static final Quaternion CURRENT = new Quaternion();
+	private static final ResourceLocation TEXTURE = new ResourceLocation(Tumbleweed.MOD_ID, "textures/entity/tumbleweed.png");
+
+	private static final FloatBuffer TEMP_BUF = BufferUtils.createFloatBuffer(16);
+	private static final Matrix4f TEMP_MATRIX = new Matrix4f();
+	public static final Quaternion TEMP_QUAT = new Quaternion();
 
 	private ModelTumbleweed tumbleweed;
 	private int lastV = 0;
@@ -45,19 +46,18 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		GlStateManager.enableBlend();
 		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-		float alpha = 0.7f;
-		if (entity.fadeAge > 1)
-			alpha -= entity.fadeAge / (float) EntityTumbleweed.MAX_FADE;
-		if (alpha < 0.0)
-			alpha = 0f;
+		float alpha = 1f - entity.fadeAge / (float) EntityTumbleweed.FADE_TIME;
+		alpha *= 0.7f;
+
+		this.shadowOpaque = alpha;
 
 		GlStateManager.color(1.0f, 1.0f, 1.0f, alpha);
 		GlStateManager.translate((float) x, (float) y + 0.25F, (float) z);
 
-		BUF_FLOAT_16.clear();
-		toMatrix(lerp(entity.prevQuat, entity.quat, partialTicks)).store(BUF_FLOAT_16);
-		BUF_FLOAT_16.flip();
-		GlStateManager.multMatrix(BUF_FLOAT_16);
+		TEMP_BUF.clear();
+		toMatrix(lerp(entity.prevQuat, entity.quat, partialTicks)).store(TEMP_BUF);
+		TEMP_BUF.flip();
+		GlStateManager.multMatrix(TEMP_BUF);
 
 		GlStateManager.rotate(entity.rot1, 1, 0, 0);
 		GlStateManager.rotate(entity.rot2, 0, 1, 0);
@@ -92,26 +92,26 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		final float zz = quat.z * quat.z;
 		final float zw = quat.z * quat.w;
 
-		MATRIX.m00 = 1f - 2f * (yy + zz);
-		MATRIX.m10 = 2f * (xy - zw);
-		MATRIX.m20 = 2f * (xz + yw);
-		MATRIX.m30 = 0f;
-		MATRIX.m01 = 2f * (xy + zw);
-		MATRIX.m11 = 1f - 2f * (xx + zz);
-		MATRIX.m21 = 2f * (yz - xw);
-		MATRIX.m31 = 0f;
-		MATRIX.m02 = 2f * (xz - yw);
-		MATRIX.m12 = 2f * (yz + xw);
-		MATRIX.m22 = 1f - 2f * (xx + yy);
-		MATRIX.m32 = 0f;
-		MATRIX.m03 = 0f;
-		MATRIX.m13 = 0f;
-		MATRIX.m23 = 0f;
-		MATRIX.m33 = 1f;
+		TEMP_MATRIX.m00 = 1f - 2f * (yy + zz);
+		TEMP_MATRIX.m10 = 2f * (xy - zw);
+		TEMP_MATRIX.m20 = 2f * (xz + yw);
+		TEMP_MATRIX.m30 = 0f;
+		TEMP_MATRIX.m01 = 2f * (xy + zw);
+		TEMP_MATRIX.m11 = 1f - 2f * (xx + zz);
+		TEMP_MATRIX.m21 = 2f * (yz - xw);
+		TEMP_MATRIX.m31 = 0f;
+		TEMP_MATRIX.m02 = 2f * (xz - yw);
+		TEMP_MATRIX.m12 = 2f * (yz + xw);
+		TEMP_MATRIX.m22 = 1f - 2f * (xx + yy);
+		TEMP_MATRIX.m32 = 0f;
+		TEMP_MATRIX.m03 = 0f;
+		TEMP_MATRIX.m13 = 0f;
+		TEMP_MATRIX.m23 = 0f;
+		TEMP_MATRIX.m33 = 1f;
 
-		MATRIX.transpose();
+		TEMP_MATRIX.transpose();
 
-		return MATRIX;
+		return TEMP_MATRIX;
 	}
 
 	private static Quaternion lerp(Quaternion start, Quaternion end, float alpha) {
