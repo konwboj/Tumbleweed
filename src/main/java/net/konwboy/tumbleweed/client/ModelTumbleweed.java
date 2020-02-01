@@ -11,7 +11,7 @@ public class ModelTumbleweed extends ModelBase {
 
 	public List<ModelRenderer> boxes;
 
-	public ModelTumbleweed() {
+	public ModelTumbleweed(float scale) {
 		this.textureHeight = 16;
 		this.textureWidth = 16;
 
@@ -19,44 +19,44 @@ public class ModelTumbleweed extends ModelBase {
 
 		{
 			ModelRenderer box = new ModelRenderer(this);
-			box.addBox(0, -8, -8, 0, 16, 16);
-			box.addBox(-8, 0, -8, 16, 0, 16);
-			box.addBox(-8, -8, 0, 16, 16, 0);
+			box.addBox(0, -8, -8, 0, 16, 16, scale);
+			box.addBox(-8, 0, -8, 16, 0, 16, scale);
+			box.addBox(-8, -8, 0, 16, 16, 0, scale);
 			this.boxes.add(box);
 		}
 
 		{
 			ModelRenderer box = new ModelRenderer(this);
-			box.addBox(0, -8, -8, 0, 16, 16);
-			box.addBox(-8, -8, 0, 16, 16, 0);
+			box.addBox(0, -8, -8, 0, 16, 16, scale);
+			box.addBox(-8, -8, 0, 16, 16, 0, scale);
 			box.rotateAngleY = (float) Math.toRadians(45);
 			this.boxes.add(box);
 		}
 
 		{
 			ModelRenderer box = new ModelRenderer(this);
-			box.addBox(0, -8, -8, 0, 16, 16);
-			box.addBox(-8, 0, -8, 16, 0, 16);
+			box.addBox(0, -8, -8, 0, 16, 16, scale);
+			box.addBox(-8, 0, -8, 16, 0, 16, scale);
 			box.rotateAngleZ = (float) Math.toRadians(45);
 			this.boxes.add(box);
 		}
 
 		{
 			ModelRenderer box = new ModelRenderer(this);
-			box.addBox(-8, 0, -8, 16, 0, 16);
-			box.addBox(-8, -8, 0, 16, 16, 0);
+			box.addBox(-8, 0, -8, 16, 0, 16, scale);
+			box.addBox(-8, -8, 0, 16, 16, 0, scale);
 			box.rotateAngleX = (float) Math.toRadians(45);
 			this.boxes.add(box);
 		}
 	}
 
 	@Override
-	public void render(Entity entity, float data1, float data2, float data3, float data4, float data5, float scale) {
+	public void render(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, float scale) {
 		for (ModelRenderer box : boxes)
 			box.render(scale);
 	}
 
 	public int getV() {
-		return 45;
+		return 55;
 	}
 }

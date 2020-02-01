@@ -1,47 +1,47 @@
 package net.konwboy.tumbleweed.common;
 
-import com.google.common.base.Predicate;
-import net.konwboy.tumbleweed.client.RenderTumbleweed;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockFence;
-import net.minecraft.block.BlockFenceGate;
-import net.minecraft.block.BlockWall;
 import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.crash.CrashReport;
-import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityTracker;
+import net.minecraft.entity.EntityTrackerEntry;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.item.EntityMinecart;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
+import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.ReportedException;
+import net.minecraft.util.IntHashMap;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
+import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Vector4f;
 
+import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
-public class EntityTumbleweed extends Entity {
+public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnData {
 
 	public static final int FADE_TIME = 4 * 20;
 	private static final int DESPAWN_RANGE = 110;
-	private static final float BASE_SIZE = 0.75f;
-	private static final double WIND_X = -0.07;
-	private static final double WIND_Z = -0.07;
+	private static final float BASE_SIZE = 3/4f;
+	private static final double WIND_X = -1/16f;
+	private static final double WIND_Z = -1/16f;
 
 	private static final DataParameter<Integer> SIZE = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.VARINT);
 	private static final DataParameter<Boolean> CUSTOM_WIND_ENABLED = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.BOOLEAN);
@@ -51,14 +51,10 @@ public class EntityTumbleweed extends Entity {
 
 	private int age;
 	public int fadeAge;
-	private boolean canDespawn;
+	public boolean persistent;
 	private double windMod;
 	private int lifetime;
-
-	private float distanceWalkedModified;
-	private float distanceWalkedOnStepModified;
-	private int nextStepDistance;
-	private int groundTicks;
+	public int groundTicks;
 
 	@SideOnly(Side.CLIENT)
 	public float rot1, rot2, rot3;
@@ -72,12 +68,13 @@ public class EntityTumbleweed extends Entity {
 
 		this.entityCollisionReduction = 0.95f;
 		this.preventEntitySpawning = true;
-		this.canDespawn = true;
 
-		if (this.worldObj.isRemote) {
-			this.rot1 = 360f * worldObj.rand.nextFloat();
-			this.rot2 = 360f * worldObj.rand.nextFloat();
-			this.rot3 = 360f * worldObj.rand.nextFloat();
+		setEntityId(getEntityId());
+
+		if (this.world.isRemote) {
+			this.rot1 = 360f * world.rand.nextFloat();
+			this.rot2 = 360f * world.rand.nextFloat();
+			this.rot3 = 360f * world.rand.nextFloat();
 
 			this.quat = new Quaternion();
 			this.prevQuat = new Quaternion();
@@ -86,45 +83,43 @@ public class EntityTumbleweed extends Entity {
 
 	@Override
 	protected void entityInit() {
-		rand.setSeed(getEntityId());
-
-		this.dataManager.register(SIZE, rand.nextInt(5) - 2);
+		this.dataManager.register(SIZE, 2);
 		this.dataManager.register(CUSTOM_WIND_ENABLED, false);
 		this.dataManager.register(CUSTOM_WIND_X, 0f);
 		this.dataManager.register(CUSTOM_WIND_Z, 0f);
 		this.dataManager.register(FADING, false);
 
-		this.windMod = 1.2 - 0.4 * rand.nextDouble();
-		this.lifetime = 2 * 60 * 20 + rand.nextInt(200);
-
 		updateSize();
 	}
 
 	@Override
-	protected void writeEntityToNBT(NBTTagCompound tagCompound) {
-		tagCompound.setInteger("Size", getSize());
-		tagCompound.setBoolean("CustomWindEnabled", getCustomWindEnabled());
-		tagCompound.setDouble("CustomWindX", getCustomWindX());
-		tagCompound.setDouble("CustomWindZ", getCustomWindZ());
-		tagCompound.setBoolean("CanDespawn", canDespawn);
+	protected void writeEntityToNBT(NBTTagCompound nbt) {
+		nbt.setInteger("Size", getSize());
+		nbt.setBoolean("CustomWindEnabled", getCustomWindEnabled());
+		nbt.setDouble("CustomWindX", getCustomWindX());
+		nbt.setDouble("CustomWindZ", getCustomWindZ());
+		nbt.setBoolean("Persistent", persistent);
+
+		AxisAlignedBB bb = this.getEntityBoundingBox();
+		nbt.setTag("AABB", this.newDoubleNBTList(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ));
 	}
 
 	@Override
-	protected void readEntityFromNBT(NBTTagCompound tagCompound) {
-		if (tagCompound.hasKey("Size"))
-			this.dataManager.set(SIZE, tagCompound.getInteger("Size"));
+	protected void readEntityFromNBT(NBTTagCompound nbt) {
+		if (nbt.hasKey("Size"))
+			this.dataManager.set(SIZE, nbt.getInteger("Size"));
 
-		if (tagCompound.hasKey("CustomWindEnabled"))
-			this.dataManager.set(CUSTOM_WIND_ENABLED, tagCompound.getBoolean("CustomWindEnabled"));
+		this.dataManager.set(CUSTOM_WIND_ENABLED, nbt.getBoolean("CustomWindEnabled"));
+		this.dataManager.set(CUSTOM_WIND_X, nbt.getFloat("CustomWindX"));
+		this.dataManager.set(CUSTOM_WIND_Z, nbt.getFloat("CustomWindZ"));
 
-		if (tagCompound.hasKey("CustomWindX"))
-			this.dataManager.set(CUSTOM_WIND_X, tagCompound.getFloat("CustomWindX"));
+		persistent = nbt.getBoolean("Persistent");
 
-		if (tagCompound.hasKey("CustomWindZ"))
-			this.dataManager.set(CUSTOM_WIND_Z, tagCompound.getFloat("CustomWindZ"));
-
-		if (tagCompound.hasKey("CanDespawn"))
-			canDespawn = tagCompound.getBoolean("CanDespawn");
+		// Fixes server-side collision glitches
+		if (nbt.hasKey("AABB")) {
+			NBTTagList aabb = nbt.getTagList("AABB", 6);
+			setEntityBoundingBox(new AxisAlignedBB(aabb.getDoubleAt(0), aabb.getDoubleAt(1), aabb.getDoubleAt(2), aabb.getDoubleAt(3), aabb.getDoubleAt(4), aabb.getDoubleAt(5)));
+		}
 	}
 
 	@Override
@@ -137,6 +132,11 @@ public class EntityTumbleweed extends Entity {
 
 	private void updateSize() {
 		float mcSize = BASE_SIZE + this.getSize() * (1 / 8f);
+
+		// Fixes client-side collision glitches
+		if (world.isRemote)
+			mcSize -= 1/2048f;
+
 		this.setSize(mcSize, mcSize);
 	}
 
@@ -156,25 +156,44 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	@Override
+	public void setEntityId(int id) {
+		super.setEntityId(id);
+
+		Random rand = new Random(id);
+
+		this.windMod = 1.05 - 0.1 * rand.nextDouble();
+		this.lifetime = 2 * 60 * 20 + rand.nextInt(200);
+	}
+
+	@Override
 	public void onUpdate() {
 		super.onUpdate();
+
+		// Fixes some cases of rubber banding
+		if (!world.isRemote && ticksExisted == 1)
+		{
+			EntityTrackerEntry entry = getTrackerEntry();
+			if (entry != null && entry.updateCounter == 0)
+				entry.updateCounter += 30;
+		}
 
 		if (this.getRidingEntity() != null) {
 			this.motionX = 0;
 			this.motionY = 0;
 			this.motionZ = 0;
+			prevQuat = quat;
 			return;
 		}
 
 		if (!this.isInWater())
 			this.motionY -= 0.012;
 
-		double x = this.motionX;
-		double y = this.motionY;
-		double z = this.motionZ;
+		double prevMotionX = this.motionX;
+		double prevMotionY = this.motionY;
+		double prevMotionZ = this.motionZ;
+		boolean prevOnGround = onGround;
 
-		boolean ground = onGround;
-		this.moveEntity(MoverType.SELF, this.motionX, this.motionY, this.motionZ);
+		this.move(MoverType.SELF, motionX, motionY, motionZ);
 
 		double windX = getCustomWindEnabled() ? getCustomWindX() : WIND_X * windMod;
 		double windZ = getCustomWindEnabled() ? getCustomWindZ() : WIND_Z * windMod;
@@ -183,43 +202,41 @@ public class EntityTumbleweed extends Entity {
 			this.motionY += 0.02;
 			this.motionX *= 0.95;
 			this.motionZ *= 0.95;
+
+			windX = windZ = 0;
 		} else if (windX != 0 || windZ != 0) {
 			this.motionX = windX;
 			this.motionZ = windZ;
 		}
 
 		// Rotate
-		if (this.worldObj.isRemote) {
+		if (this.world.isRemote) {
 			groundTicks--;
 
-			if ((!ground && onGround) || isInWater())
+			if ((!prevOnGround && onGround) || isInWater())
 				groundTicks = 10;
 			else if (getCustomWindEnabled())
 				groundTicks = 5;
 
 			double div = 5d * width - groundTicks / 5d;
-			double rotX = 2d * Math.PI * this.motionX / div;
-			double rotZ = -2d * Math.PI * this.motionZ / div;
+			double rotX = -2d * Math.PI * prevMotionX / div;
+			double rotZ = 2d * Math.PI * prevMotionZ / div;
 
-			this.prevQuat = this.quat;
-			RenderTumbleweed.TEMP_QUAT.setFromAxisAngle((new Vector4f(1, 0, 0, (float) rotZ)));
-			Quaternion.mul(this.quat, RenderTumbleweed.TEMP_QUAT, this.quat);
-			RenderTumbleweed.TEMP_QUAT.setFromAxisAngle((new Vector4f(0, 0, 1, (float) rotX)));
-			Quaternion.mul(this.quat, RenderTumbleweed.TEMP_QUAT, this.quat);
+			this.prevQuat = new Quaternion(this.quat);
+			Quaternion temp = new Quaternion();
+			temp.setFromAxisAngle(new Vector4f(1, 0, 0, (float) rotZ));
+			Quaternion.mul(temp, quat, quat);
+			temp.setFromAxisAngle(new Vector4f(0, 0, 1, (float) rotX));
+			Quaternion.mul(temp, quat, quat);
 		}
 
 		// Bounce on ground
 		if (this.onGround) {
-			if (windX * windX + windZ * windZ >= 0.05 * 0.05)
-				this.motionY = Math.max(-y * 0.7, 0.24 - getSize() * 0.02);
-			else
-				this.motionY = -y * 0.7;
-		}
-
-		// Bounce on walls
-		if (this.isCollidedHorizontally) {
-			this.motionX = -x * 0.4;
-			this.motionZ = -z * 0.4;
+			if (windX * windX + windZ * windZ >= 0.05 * 0.05) {
+				this.motionY = Math.max(-prevMotionY * 0.7, 0.24 - getSize() * 0.02);
+			} else {
+				this.motionY = -prevMotionY * 0.7;
+			}
 		}
 
 		this.motionX *= 0.98;
@@ -237,8 +254,8 @@ public class EntityTumbleweed extends Entity {
 
 		collideWithNearbyEntities();
 
-		if (!this.worldObj.isRemote) {
-			this.age++;
+		if (!this.world.isRemote) {
+			this.age += (collidedHorizontally || isInWater()) ? 8 : 1;
 			tryDespawn();
 		}
 
@@ -250,18 +267,27 @@ public class EntityTumbleweed extends Entity {
 		}
 	}
 
+	@Override
+	protected void onInsideBlock(IBlockState state) {
+	}
+
 	private void tryDespawn() {
-		if (!canDespawn) {
+		if (persistent) {
 			this.age = 0;
 			return;
 		}
 
-		Entity entity = this.worldObj.getClosestPlayerToEntity(this, DESPAWN_RANGE);
-		if (entity == null)
+		EntityPlayer player = this.world.getClosestPlayerToEntity(this, -1);
+		if (player != null && player.getDistanceSq(this) > DESPAWN_RANGE * DESPAWN_RANGE)
 			this.setDead();
 
 		if (this.age > this.lifetime && fadeAge == 0)
 			this.dataManager.set(FADING, true);
+	}
+
+	@Override
+	public boolean isInRangeToRenderDist(double distance) {
+		return distance < 128 * 128;
 	}
 
 	@Override
@@ -270,25 +296,29 @@ public class EntityTumbleweed extends Entity {
 			return false;
 		}
 
-		if (!this.isDead && !this.worldObj.isRemote) {
+		if (!this.isDead && !this.world.isRemote) {
 			this.setDead();
-			this.setBeenAttacked();
 
 			SoundType sound = SoundType.PLANT;
 			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
 
-			ItemStack item = Config.getRandomItem();
-			if (item != null) {
-				EntityItem entityitem = new EntityItem(this.worldObj, this.posX, this.posY, this.posZ, item);
-				entityitem.motionX = 0;
-				entityitem.motionY = 0.2D;
-				entityitem.motionZ = 0;
-				entityitem.setDefaultPickupDelay();
-				this.worldObj.spawnEntityInWorld(entityitem);
-			}
+			if (TumbleweedConfig.enableDrops)
+				dropItem();
 		}
 
 		return true;
+	}
+
+	private void dropItem() {
+		ItemStack item = TumbleweedConfig.Logic.getRandomItem();
+		if (item != null) {
+			EntityItem entityitem = new EntityItem(this.world, this.posX, this.posY, this.posZ, item);
+			entityitem.motionX = 0;
+			entityitem.motionY = 0.2D;
+			entityitem.motionZ = 0;
+			entityitem.setDefaultPickupDelay();
+			this.world.spawnEntity(entityitem);
+		}
 	}
 
 	@Override
@@ -297,191 +327,40 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	@Override
-	public void moveEntity(MoverType mover, double velX, double velY, double velZ) {
-		if (this.noClip) {
-			this.setEntityBoundingBox(this.getEntityBoundingBox().offset(velX, velY, velZ));
-			this.resetPositionToBB();
-			return;
-		}
+	protected void playStepSound(BlockPos pos, Block blockIn) {
+		this.playSound(SoundEvents.BLOCK_GRASS_STEP, 0.15f,1.0f);
+	}
 
-		double startX = this.posX;
-		double startY = this.posY;
-		double startZ = this.posZ;
+	@Override
+	public boolean canTrample(World world, Block block, BlockPos pos, float fallDistance) {
+		return world.rand.nextFloat() < 0.7F && world.getGameRules().getBoolean("mobGriefing") && TumbleweedConfig.damageCrops;
+	}
 
-		if (this.isInWeb) {
-			this.isInWeb = false;
-			velX *= 0.25D;
-			velY *= 0.05D;
-			velZ *= 0.25D;
-			this.motionX = 0.0D;
-			this.motionY = 0.0D;
-			this.motionZ = 0.0D;
-		}
-
-		double startVelX = velX;
-		double startVelY = velY;
-		double startVelZ = velZ;
-
-		List<AxisAlignedBB> list1 = this.worldObj.getCollisionBoxes(this, this.getEntityBoundingBox().addCoord(velX, velY, velZ));
-
-		for (AxisAlignedBB axisalignedbb1 : list1)
-			velY = axisalignedbb1.calculateYOffset(this.getEntityBoundingBox(), velY);
-
-		this.setEntityBoundingBox(this.getEntityBoundingBox().offset(0.0D, velY, 0.0D));
-
-		for (AxisAlignedBB axisalignedbb2 : list1)
-			velX = axisalignedbb2.calculateXOffset(this.getEntityBoundingBox(), velX);
-
-		this.setEntityBoundingBox(this.getEntityBoundingBox().offset(velX, 0.0D, 0.0D));
-
-		for (AxisAlignedBB axisalignedbb13 : list1)
-			velZ = axisalignedbb13.calculateZOffset(this.getEntityBoundingBox(), velZ);
-
-		this.setEntityBoundingBox(this.getEntityBoundingBox().offset(0.0D, 0.0D, velZ));
-
-		this.resetPositionToBB();
-		this.isCollidedHorizontally = startVelX != velX || startVelZ != velZ;
-		this.isCollidedVertically = startVelY != velY;
-		this.onGround = this.isCollidedVertically && startVelY < 0.0D;
-		this.isCollided = this.isCollidedHorizontally || this.isCollidedVertically;
-		int i = MathHelper.floor_double(this.posX);
-		int j = MathHelper.floor_double(this.posY - 0.2D);
-		int k = MathHelper.floor_double(this.posZ);
-		BlockPos blockpos = new BlockPos(i, j, k);
-		IBlockState state = this.worldObj.getBlockState(blockpos);
-		Block block = state.getBlock();
-
-		if (state.getBlock() == Blocks.AIR) {
-			IBlockState state1 = this.worldObj.getBlockState(blockpos.down());
-			Block block1 = state1.getBlock();
-
-			if (block1 instanceof BlockFence || block1 instanceof BlockWall || block1 instanceof BlockFenceGate) {
-				state = state1;
-				blockpos = blockpos.down();
-			}
-		}
-
-		this.updateFallState(velY, this.onGround, state, blockpos);
-
-		if (startVelX != velX)
-			this.motionX = 0.0D;
-
-		if (startVelZ != velZ)
-			this.motionZ = 0.0D;
-
-		if (startVelY != velY) {
-			block.onLanded(this.worldObj, this);
-
-			if (block == Blocks.FARMLAND) {
-				if (!worldObj.isRemote && worldObj.rand.nextFloat() < 0.7F) {
-					if (!worldObj.getGameRules().getBoolean("mobGriefing"))
-						return;
-
-					worldObj.setBlockState(blockpos, Blocks.DIRT.getDefaultState());
-				}
-			}
-		}
-
-		double d15 = this.posX - startX;
-		double d16 = this.posY - startY;
-		double d17 = this.posZ - startZ;
-
-		if (block != Blocks.LADDER)
-			d16 = 0.0D;
-
-		if (this.onGround)
-			block.onEntityWalk(this.worldObj, blockpos, this);
-
-		this.distanceWalkedModified = (float) ((double) this.distanceWalkedModified + (double) MathHelper.sqrt_double(d15 * d15 + d17 * d17) * 0.6D);
-		this.distanceWalkedOnStepModified = (float) ((double) this.distanceWalkedOnStepModified + (double) MathHelper.sqrt_double(d15 * d15 + d16 * d16 + d17 * d17) * 0.6D);
-
-		if (this.distanceWalkedOnStepModified > (float) this.nextStepDistance && state.getMaterial() != Material.AIR) {
-			this.nextStepDistance = (int) this.distanceWalkedOnStepModified + 1;
-
-			if (this.isInWater()) {
-				float f = MathHelper.sqrt_double(this.motionX * this.motionX * 0.2D + this.motionY * this.motionY + this.motionZ * this.motionZ * 0.2D) * 0.35F;
-
-				if (f > 1.0F)
-					f = 1.0F;
-
-				this.playSound(this.getSwimSound(), f, 1.0F + (this.rand.nextFloat() - this.rand.nextFloat()) * 0.4F);
-			}
-
-			if (!state.getMaterial().isLiquid()) {
-				SoundType sound = SoundType.PLANT;
-				this.playSound(sound.getStepSound(), sound.getVolume() * 0.15F, sound.getPitch());
-			}
-		}
-
-		try {
-			this.doBlockCollisions();
-		} catch (Throwable throwable) {
-			CrashReport crashreport = CrashReport.makeCrashReport(throwable, "Checking entity block collision");
-			CrashReportCategory crashreportcategory = crashreport.makeCategory("Entity being checked for collision");
-			this.addEntityCrashInfo(crashreportcategory);
-			throw new ReportedException(crashreport);
-		}
+	@Override
+	protected boolean shouldSetPosAfterLoading() {
+		return false;
 	}
 
 	private void collideWithNearbyEntities() {
-		List<Entity> list = this.worldObj.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox().expand(0.2D, 0.0D, 0.2D), new Predicate<Entity>() {
-			public boolean apply(Entity p_apply_1_) {
-				return p_apply_1_.canBePushed();
-			}
-		});
+		List<Entity> list = this.world.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox().expand(0.2D, 0.0D, 0.2D), Entity::canBePushed);
 
-		for (Entity e : list)
-			collision(e);
-	}
-
-	private void collision(Entity entity) {
-		if (isPassenger(entity) || this.getRidingEntity() == entity)
-			return;
-
-		if (this.noClip || entity.noClip)
-			return;
-
-		if (!this.worldObj.isRemote && entity instanceof EntityMinecart && ((EntityMinecart) entity).getType() == EntityMinecart.Type.RIDEABLE && entity.motionX * entity.motionX + entity.motionZ * entity.motionZ > 0.01D && entity.getPassengers().isEmpty() && this.getRidingEntity() == null) {
-			this.startRiding(entity);
-			this.motionY += 0.25;
-			this.velocityChanged = true;
-		} else {
-			double dx = this.posX - entity.posX;
-			double dz = this.posZ - entity.posZ;
-			double dmax = MathHelper.abs_max(dx, dz);
-
-			if (dmax < 0.01D)
-				return;
-
-			dmax = (double) MathHelper.sqrt_double(dmax);
-			dx /= dmax;
-			dz /= dmax;
-			double d3 = 1.0D / dmax;
-
-			if (d3 > 1.0D)
-				d3 = 1.0D;
-
-			dx *= d3;
-			dz *= d3;
-			dx *= 0.05D;
-			dz *= 0.05D;
-			dx *= (double) (1.0F - entity.entityCollisionReduction);
-			dz *= (double) (1.0F - entity.entityCollisionReduction);
-
-			if (entity.getPassengers().isEmpty()) {
-				entity.motionX += -dx;
-				entity.motionZ += -dz;
+		for (Entity entity : list) {
+			if (!this.world.isRemote && entity instanceof EntityMinecart && ((EntityMinecart) entity).getType() == EntityMinecart.Type.RIDEABLE && entity.motionX * entity.motionX + entity.motionZ * entity.motionZ > 0.01D && entity.getPassengers().isEmpty() && this.getRidingEntity() == null) {
+				this.startRiding(entity);
+				this.motionY += 0.25;
+				this.velocityChanged = true;
 			}
 
-			if (this.getPassengers().isEmpty()) {
-				this.motionX += dx;
-				this.motionZ += dz;
-			}
+			entity.applyEntityCollision(this);
 		}
 	}
 
 	public boolean isNotColliding() {
-		return this.worldObj.checkNoEntityCollision(this.getEntityBoundingBox(), this) && this.worldObj.getCollisionBoxes(this, this.getEntityBoundingBox()).isEmpty() && !this.worldObj.containsAnyLiquid(this.getEntityBoundingBox());
+		return this.world.checkNoEntityCollision(this.getEntityBoundingBox(), this) && this.world.getCollisionBoxes(this, this.getEntityBoundingBox()).isEmpty() && !this.world.containsAnyLiquid(this.getEntityBoundingBox());
+	}
+
+	public void setSize(int size) {
+		this.dataManager.set(SIZE, size);
 	}
 
 	public int getSize() {
@@ -502,6 +381,55 @@ public class EntityTumbleweed extends Entity {
 
 	public boolean isFading() {
 		return this.dataManager.get(FADING);
+	}
+
+	private static Field trackedEntityHashTable;
+	private static Field encodedPosX;
+	private static Field encodedPosY;
+	private static Field encodedPosZ;
+
+	static {
+		trackedEntityHashTable = fieldsOfType(EntityTracker.class, IntHashMap.class)[0];
+		trackedEntityHashTable.setAccessible(true);
+		encodedPosX = fieldsOfType(EntityTrackerEntry.class, long.class)[0];
+		encodedPosX.setAccessible(true);
+		encodedPosY = fieldsOfType(EntityTrackerEntry.class, long.class)[1];
+		encodedPosY.setAccessible(true);
+		encodedPosZ = fieldsOfType(EntityTrackerEntry.class, long.class)[2];
+		encodedPosZ.setAccessible(true);
+	}
+
+	private static Field[] fieldsOfType(Class inClass, Class type){
+		return Arrays.stream(inClass.getDeclaredFields()).filter(f -> f.getType() == type).toArray(Field[]::new);
+	}
+
+	public EntityTrackerEntry getTrackerEntry() {
+		EntityTrackerEntry entry = null;
+		try {
+			entry = ((IntHashMap<EntityTrackerEntry>) trackedEntityHashTable.get(((WorldServer) world).getEntityTracker())).lookup(getEntityId());
+		} catch(IllegalAccessException e){
+		}
+		return entry;
+	}
+
+	@Override
+	public void writeSpawnData(ByteBuf buffer) {
+		EntityTrackerEntry entry = getTrackerEntry();
+
+		try {
+			buffer.writeLong((long)encodedPosX.get(entry));
+			buffer.writeLong((long)encodedPosY.get(entry));
+			buffer.writeLong((long)encodedPosZ.get(entry));
+		} catch(IllegalAccessException e){
+		}
+	}
+
+	@Override
+	public void readSpawnData(ByteBuf additionalData) {
+		// Fixes some more cases of rubber banding
+		this.serverPosX = additionalData.readLong();
+		this.serverPosY = additionalData.readLong();
+		this.serverPosZ = additionalData.readLong();
 	}
 
 }

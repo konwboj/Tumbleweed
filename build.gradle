@@ -1,45 +1,30 @@
 buildscript {
     repositories {
-        mavenCentral()
         jcenter()
-        maven {
-            name = "forge"
-            url = "http://files.minecraftforge.net/maven"
-        }
+        maven { url = "http://files.minecraftforge.net/maven" }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.2-SNAPSHOT'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
     }
 }
-
-plugins {
-    id 'net.franz-becker.gradle-lombok' version '1.5'
-}
-
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.11-0.4.5"
+version = "1.12-0.4.6"
 group = "net.konwboy.tumbleweed"
 archivesBaseName = "tumbleweed"
 
+sourceCompatibility = targetCompatibility = '1.8'
+compileJava {
+    sourceCompatibility = targetCompatibility = '1.8'
+}
+
 minecraft {
-    version = "1.11-13.19.1.2188"
-    mappings = "snapshot_20161111"
+    version = "1.12.2-14.23.5.2768"
+    mappings = "snapshot_20171003"
     replace "@VERSION@", project.version
     replace "@MC_VERSIONS@", "[1.11,1.12.2]"
     replaceIn "Tumbleweed.java"
     makeObfSourceJar = false
-}
-
-lombok {
-    version = "1.16.8"
-    sha256 = "fe32b29b7b33eb2b19866cbc5345c59c9984a6036cc396856a04c0d09f99ea68"
-}
-
-import net.franz_becker.gradle.lombok.task.DelombokTask
-
-task delombok(type: DelombokTask) {
-    args("src/main/java", "-d", "build/sources/delomboked/java")
 }
 
 processResources {

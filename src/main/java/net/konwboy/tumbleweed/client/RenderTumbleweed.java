@@ -7,20 +7,12 @@ import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Quaternion;
-
-import java.nio.FloatBuffer;
 
 public class RenderTumbleweed extends Render<EntityTumbleweed> {
 
 	private static final ResourceLocation TEXTURE = new ResourceLocation(Tumbleweed.MOD_ID, "textures/entity/tumbleweed.png");
-
-	private static final FloatBuffer TEMP_BUF = BufferUtils.createFloatBuffer(16);
-	private static final Matrix4f TEMP_MATRIX = new Matrix4f();
-	public static final Quaternion TEMP_QUAT = new Quaternion();
 
 	private ModelTumbleweed tumbleweed;
 	private int lastV = 0;
@@ -29,14 +21,14 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		super(manager);
 		this.shadowSize = 0.4f;
 		this.shadowOpaque = 0.8f;
-		this.tumbleweed = new ModelTumbleweed();
+		this.tumbleweed = new ModelTumbleweed(0);
 		this.lastV = this.tumbleweed.getV();
 	}
 
 	@Override
-	public void doRender(EntityTumbleweed entity, double x, double y, double z, float p_76986_8_, float partialTicks) {
+	public void doRender(EntityTumbleweed entity, double x, double y, double z, float yaw, float partialTicks) {
 		if (lastV != tumbleweed.getV()) {
-			this.tumbleweed = new ModelTumbleweed();
+			this.tumbleweed = new ModelTumbleweed(0);
 			this.lastV = tumbleweed.getV();
 		}
 
@@ -51,20 +43,19 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 
 		this.shadowOpaque = alpha;
 
-		GlStateManager.color(1.0f, 1.0f, 1.0f, alpha);
-		GlStateManager.translate((float) x, (float) y + 0.25F, (float) z);
+		GlStateManager.color(1f, 1f, 1f, alpha);
+		GlStateManager.translate(x, y + entity.height * 0.3f, z);
 
-		TEMP_BUF.clear();
-		toMatrix(lerp(entity.prevQuat, entity.quat, partialTicks)).store(TEMP_BUF);
-		TEMP_BUF.flip();
-		GlStateManager.multMatrix(TEMP_BUF);
+		double scaleY = 1d - Math.sin(Math.max(entity.groundTicks - 7 - partialTicks, 0) / 3f * Math.PI) * 0.25f;
+		float size = 1.0f + entity.getSize() / 8f;
+
+		GlStateManager.scale(size, size, size);
+		GlStateManager.scale(1f, scaleY, 1f);
+		GlStateManager.rotate(lerp(entity.prevQuat, entity.quat, partialTicks));
 
 		GlStateManager.rotate(entity.rot1, 1, 0, 0);
 		GlStateManager.rotate(entity.rot2, 0, 1, 0);
 		GlStateManager.rotate(entity.rot3, 0, 0, 1);
-
-		float size = 1.0f + entity.getSize() / 8f;
-		GlStateManager.scale(size, size, size);
 
 		this.bindTexture(TEXTURE);
 		this.tumbleweed.render(entity, 0, 0, 0, 0, 0, 0.0625F);
@@ -73,7 +64,7 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		GlStateManager.enableLighting();
 		GlStateManager.popMatrix();
 
-		super.doRender(entity, x, y, z, p_76986_8_, partialTicks);
+		super.doRender(entity, x, y, z, yaw, partialTicks);
 	}
 
 	@Override
@@ -81,40 +72,7 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		return TEXTURE;
 	}
 
-	private static Matrix4f toMatrix(Quaternion quat) {
-		final float xx = quat.x * quat.x;
-		final float xy = quat.x * quat.y;
-		final float xz = quat.x * quat.z;
-		final float xw = quat.x * quat.w;
-		final float yy = quat.y * quat.y;
-		final float yz = quat.y * quat.z;
-		final float yw = quat.y * quat.w;
-		final float zz = quat.z * quat.z;
-		final float zw = quat.z * quat.w;
-
-		TEMP_MATRIX.m00 = 1f - 2f * (yy + zz);
-		TEMP_MATRIX.m10 = 2f * (xy - zw);
-		TEMP_MATRIX.m20 = 2f * (xz + yw);
-		TEMP_MATRIX.m30 = 0f;
-		TEMP_MATRIX.m01 = 2f * (xy + zw);
-		TEMP_MATRIX.m11 = 1f - 2f * (xx + zz);
-		TEMP_MATRIX.m21 = 2f * (yz - xw);
-		TEMP_MATRIX.m31 = 0f;
-		TEMP_MATRIX.m02 = 2f * (xz - yw);
-		TEMP_MATRIX.m12 = 2f * (yz + xw);
-		TEMP_MATRIX.m22 = 1f - 2f * (xx + yy);
-		TEMP_MATRIX.m32 = 0f;
-		TEMP_MATRIX.m03 = 0f;
-		TEMP_MATRIX.m13 = 0f;
-		TEMP_MATRIX.m23 = 0f;
-		TEMP_MATRIX.m33 = 1f;
-
-		TEMP_MATRIX.transpose();
-
-		return TEMP_MATRIX;
-	}
-
-	private static Quaternion lerp(Quaternion start, Quaternion end, float alpha) {
+	public static Quaternion lerp(Quaternion start, Quaternion end, float alpha) {
 		Quaternion result = new Quaternion();
 		final float d = start.x * end.x + start.y * end.y + start.z * end.z + start.w * end.w;
 		float absDot = d < 0.f ? -d : d;
