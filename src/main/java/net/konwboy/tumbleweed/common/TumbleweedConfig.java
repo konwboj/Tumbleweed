@@ -20,7 +20,7 @@ public class TumbleweedConfig {
 
 	@Config.Name("Chance")
 	@Config.Comment("Chance a tumbleweed spawns in a chunk.")
-	public static double spawnChance = 0.4;
+	public static double spawnChance = 0.5;
 
 	@Config.Name("Enable Drops")
 	public static boolean enableDrops = true;
@@ -31,7 +31,7 @@ public class TumbleweedConfig {
 
 	@Config.Name("Max Per Player")
 	@Config.Comment("Maximum number of tumbleweeds existing per player (technically 17x17 loaded chunks).")
-	public static int maxPerPlayer = 6;
+	public static int maxPerPlayer = 8;
 
 	@Config.Name("Drops")
 	@Config.Comment("These items will drop from a tumbleweed upon destroying.\n<weight> <mod>:<item>:[metadata] [amount]")

@@ -3,7 +3,6 @@ package net.konwboy.tumbleweed.common;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
 import net.minecraft.block.SoundType;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityTracker;
 import net.minecraft.entity.EntityTrackerEntry;
@@ -54,7 +53,8 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	public boolean persistent;
 	private double windMod;
 	private int lifetime;
-	public int groundTicks;
+	private float angularX, angularZ;
+	public float stretch = 1f, prevStretch = 1f;
 
 	@SideOnly(Side.CLIENT)
 	public float rot1, rot2, rot3;
@@ -171,17 +171,20 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		// Fixes some cases of rubber banding
 		if (!world.isRemote && ticksExisted == 1)
-		{
-			EntityTrackerEntry entry = getTrackerEntry();
-			if (entry != null && entry.updateCounter == 0)
-				entry.updateCounter += 30;
+			trackerHack();
+
+		if (this.world.isRemote) {
+			prevStretch = stretch;
+			stretch *= 1.2f;
+			if (stretch > 1f) stretch = 1f;
+
+			this.prevQuat = new Quaternion(this.quat);
 		}
 
 		if (this.getRidingEntity() != null) {
 			this.motionX = 0;
 			this.motionY = 0;
 			this.motionZ = 0;
-			prevQuat = quat;
 			return;
 		}
 
@@ -211,22 +214,30 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		// Rotate
 		if (this.world.isRemote) {
-			groundTicks--;
+			if (prevOnGround != onGround)
+				stretch *= 0.75f;
 
-			if ((!prevOnGround && onGround) || isInWater())
-				groundTicks = 10;
-			else if (getCustomWindEnabled())
-				groundTicks = 5;
+			float motionAngleX = (float)-prevMotionX / (width * 0.5f);
+			float motionAngleZ = (float)prevMotionZ / (width * 0.5f);
 
-			double div = 5d * width - groundTicks / 5d;
-			double rotX = -2d * Math.PI * prevMotionX / div;
-			double rotZ = 2d * Math.PI * prevMotionZ / div;
+			if (onGround) {
+				angularX = motionAngleX;
+				angularZ = motionAngleZ;
+			}
 
-			this.prevQuat = new Quaternion(this.quat);
+			if (isInWater()) {
+				angularX += motionAngleX * 0.2f;
+				angularZ += motionAngleZ * 0.2f;
+			}
+
+			float resistance = isInWater() ? 0.9f : 0.96f;
+			angularX *= resistance;
+			angularZ *= resistance;
+
 			Quaternion temp = new Quaternion();
-			temp.setFromAxisAngle(new Vector4f(1, 0, 0, (float) rotZ));
+			temp.setFromAxisAngle(new Vector4f(1, 0, 0, angularZ));
 			Quaternion.mul(temp, quat, quat);
-			temp.setFromAxisAngle(new Vector4f(0, 0, 1, (float) rotX));
+			temp.setFromAxisAngle(new Vector4f(0, 0, 1, angularX));
 			Quaternion.mul(temp, quat, quat);
 		}
 
@@ -243,15 +254,6 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		this.motionY *= 0.98;
 		this.motionZ *= 0.98;
 
-		if (Math.abs(this.motionX) < 0.005)
-			this.motionX = 0.0;
-
-		if (Math.abs(this.motionY) < 0.005)
-			this.motionY = 0.0;
-
-		if (Math.abs(this.motionZ) < 0.005)
-			this.motionZ = 0.0;
-
 		collideWithNearbyEntities();
 
 		if (!this.world.isRemote) {
@@ -267,8 +269,10 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		}
 	}
 
-	@Override
-	protected void onInsideBlock(IBlockState state) {
+	private void trackerHack() {
+		EntityTrackerEntry entry = getTrackerEntry();
+		if (entry != null && entry.updateCounter == 0)
+			entry.updateCounter += 30;
 	}
 
 	private void tryDespawn() {

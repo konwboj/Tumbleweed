@@ -46,11 +46,12 @@ public class RenderTumbleweed extends Render<EntityTumbleweed> {
 		GlStateManager.color(1f, 1f, 1f, alpha);
 		GlStateManager.translate(x, y + entity.height * 0.3f, z);
 
-		double scaleY = 1d - Math.sin(Math.max(entity.groundTicks - 7 - partialTicks, 0) / 3f * Math.PI) * 0.25f;
 		float size = 1.0f + entity.getSize() / 8f;
-
 		GlStateManager.scale(size, size, size);
-		GlStateManager.scale(1f, scaleY, 1f);
+
+		float stretch = entity.prevStretch + (entity.stretch - entity.prevStretch) * partialTicks;
+		GlStateManager.scale(1f, stretch, 1f);
+
 		GlStateManager.rotate(lerp(entity.prevQuat, entity.quat, partialTicks));
 
 		GlStateManager.rotate(entity.rot1, 1, 0, 0);

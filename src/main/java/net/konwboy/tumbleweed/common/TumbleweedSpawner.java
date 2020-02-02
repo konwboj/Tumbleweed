@@ -6,7 +6,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.server.management.PlayerChunkMapEntry;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -52,8 +51,7 @@ public class TumbleweedSpawner {
 					if (corner || !world.getWorldBorder().contains(chunk))
 						continue;
 
-					PlayerChunkMapEntry playerChunk = world.getPlayerChunkMap().getEntry(chunk.x, chunk.z);
-					if (playerChunk == null || !playerChunk.isSentToPlayers())
+					if (!isEntityProcessing(world, chunk.x * 16, chunk.z * 16))
 						continue;
 
 					Biome biome = world.getBiome(chunk.getBlock(8, 0, 8));
@@ -69,7 +67,7 @@ public class TumbleweedSpawner {
 		Collections.shuffle(chunkList);
 
 		BlockPos worldSpawn = world.getSpawnPoint();
-		int current = world.countEntities(net.konwboy.tumbleweed.common.EntityTumbleweed.class);
+		int current = world.countEntities(EntityTumbleweed.class);
 		int max = MathHelper.ceil(TumbleweedConfig.maxPerPlayer * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
 
 		for (ChunkPos chunk : chunkList) {
@@ -115,7 +113,7 @@ public class TumbleweedSpawner {
 				if (world.isAnyPlayerWithinRangeAt(x, y, z, 32) || worldSpawn.distanceSq(x, y, z) < 24.0 * 24.0)
 					continue;
 
-				net.konwboy.tumbleweed.common.EntityTumbleweed entity = new net.konwboy.tumbleweed.common.EntityTumbleweed(world);
+				EntityTumbleweed entity = new EntityTumbleweed(world);
 				entity.setSize(world.rand.nextInt(5) - 2);
 				entity.setLocationAndAngles((double) x + 0.5, (double) y + 0.5 + 0.5 * world.rand.nextDouble(), (double) z + 0.5, 0.0F, 0.0F);
 
