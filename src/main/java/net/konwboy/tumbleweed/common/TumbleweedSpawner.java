@@ -2,27 +2,29 @@ package net.konwboy.tumbleweed.common;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.EnumFacing;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.World;
-import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.gen.Heightmap;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.BiomeDictionary;
-import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+@Mod.EventBusSubscriber
 public class TumbleweedSpawner {
 
 	private static final int TRY_SPAWN_TICKS = 10 * 20;
@@ -30,15 +32,15 @@ public class TumbleweedSpawner {
 	private static final int SEARCH_RADIUS = 2;
 	private static final int SPAWN_ATTEMPTS = 10;
 
-	private static void trySpawn(WorldServer world) {
+	private static void trySpawn(ServerWorld world) {
 		Set<ChunkPos> eligibleChunksForSpawning = Sets.newHashSet();
 
-		for (EntityPlayer entityplayer : world.playerEntities) {
+		for (PlayerEntity entityplayer : world.getPlayers()) {
 			if (entityplayer.isSpectator())
 				continue;
 
-			int playerX = MathHelper.floor(entityplayer.posX / 16.0D);
-			int playerZ = MathHelper.floor(entityplayer.posZ / 16.0D);
+			int playerX = MathHelper.floor(entityplayer.posX / 16d);
+			int playerZ = MathHelper.floor(entityplayer.posZ / 16d);
 
 			for (int x = 8; x >= -8; x--) {
 				for (int z = 8; z >= -8; z--) {
@@ -67,7 +69,7 @@ public class TumbleweedSpawner {
 		Collections.shuffle(chunkList);
 
 		BlockPos worldSpawn = world.getSpawnPoint();
-		int current = world.countEntities(EntityTumbleweed.class);
+		long current = world.getEntities().filter(e -> e.getType() == Tumbleweed.TUMBLEWEED).count();
 		int max = MathHelper.ceil(TumbleweedConfig.maxPerPlayer * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
 
 		for (ChunkPos chunk : chunkList) {
@@ -82,12 +84,11 @@ public class TumbleweedSpawner {
 
 			for (int x = -SEARCH_RADIUS; x <= SEARCH_RADIUS; x++)
 				for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++) {
-					BlockPos check = world.getHeight(new BlockPos(start.getX() + x, 0, start.getZ() + z));
-					IBlockState state = world.getBlockState(check);
+					BlockPos check = world.getHeight(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(start.getX() + x, 0, start.getZ() + z));
+					BlockState state = world.getBlockState(check);
 					Block block = state.getBlock();
-					TumbleweedConfig.Metadata meta = new TumbleweedConfig.Metadata(block.getRegistryName(), block.getMetaFromState(state));
 
-					if (TumbleweedConfig.Logic.spawningBlocks.contains(meta) && world.canBlockSeeSky(check)) {
+					if (TumbleweedConfig.spawningBlocks.contains(block.getRegistryName()) && world.canBlockSeeSky(check)) {
 						spawner = check;
 						break;
 					}
@@ -107,20 +108,20 @@ public class TumbleweedSpawner {
 				if (!isEntityProcessing(world, x, z))
 					continue;
 
-				if (!world.isSideSolid(new BlockPos(x, y - 1, z), EnumFacing.UP))
+				if (!world.getBlockState(new BlockPos(x, y - 1, z)).isSolid())
 					continue;
 
-				if (world.isAnyPlayerWithinRangeAt(x, y, z, 32) || worldSpawn.distanceSq(x, y, z) < 24.0 * 24.0)
+				if (world.isPlayerWithin(x, y, z, 32) || worldSpawn.distanceSq(new Vec3i(x, y, z)) < 24.0 * 24.0)
 					continue;
 
-				EntityTumbleweed entity = new EntityTumbleweed(world);
+				EntityTumbleweed entity = Tumbleweed.TUMBLEWEED.create(world);
 				entity.setSize(world.rand.nextInt(5) - 2);
 				entity.setLocationAndAngles((double) x + 0.5, (double) y + 0.5 + 0.5 * world.rand.nextDouble(), (double) z + 0.5, 0.0F, 0.0F);
 
 				if (entity.isNotColliding()) {
 					current++;
 					packSpawned++;
-					world.spawnEntity(entity);
+					world.addEntity(entity);
 				}
 
 				if (packSpawned == packSize)
@@ -131,46 +132,41 @@ public class TumbleweedSpawner {
 
 	private static boolean isValidBiome(Biome biome) {
 		boolean rightType = BiomeDictionary.hasType(biome, BiomeDictionary.Type.DRY) || BiomeDictionary.hasType(biome, BiomeDictionary.Type.SANDY);
-		return TumbleweedConfig.Logic.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.Logic.biomeWhitelist.contains(biome.getRegistryName());
+		return TumbleweedConfig.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.biomeWhitelist.contains(biome.getRegistryName());
 	}
 
 	private static BlockPos getRandomSurfacePosition(World world, int chunkX, int chunkZ) {
-		Chunk chunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
+		Chunk chunk = world.getChunk(chunkX, chunkZ);
 		int x = chunkX * 16 + world.rand.nextInt(16 - SEARCH_RADIUS) + SEARCH_RADIUS;
 		int z = chunkZ * 16 + world.rand.nextInt(16 - SEARCH_RADIUS) + SEARCH_RADIUS;
-		int y = chunk.getHeight(new BlockPos(x, 0, z));
+		int y = chunk.getTopBlockY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
 
 		return new BlockPos(x, y, z);
 	}
 
 	private static boolean isEntityProcessing(World world, double posX, double posZ) {
-		int x = MathHelper.floor(posX);
-		int z = MathHelper.floor(posZ);
-		return world.isAreaLoaded(new BlockPos(x - 32, 0, z - 32), new BlockPos(x + 32, 0, z + 32));
+		return world.getChunkProvider().isChunkLoaded(new ChunkPos(MathHelper.floor(posX) >> 4, MathHelper.floor(posZ) >> 4));
 	}
 
 	@SubscribeEvent
-	public void onTick(TickEvent.WorldTickEvent event) {
-		WorldServer world = (WorldServer) event.world;
+	public static void onTick(TickEvent.WorldTickEvent event) {
+		ServerWorld world = (ServerWorld) event.world;
 
 		if (event.phase != TickEvent.Phase.END)
 			return;
 
-		if (world.getTotalWorldTime() % TRY_SPAWN_TICKS == 7) {
-			world.profiler.startSection("spawn_tumbleweed");
+		if (world.getGameTime() % TRY_SPAWN_TICKS == 7) {
+			world.getProfiler().startSection("spawn_tumbleweed");
 			trySpawn(world);
-			world.profiler.endSection();
+			world.getProfiler().endSection();
 		}
-	}
-
-	@SubscribeEvent
-	public void onCanUpdate(EntityEvent.CanUpdate event) {
-		Entity entity = event.getEntity();
-		World world = entity.getEntityWorld();
 
 		// De-spawn to prevent piling up in non entity-processing chunks
-		if (!world.isRemote && entity instanceof EntityTumbleweed && entity.ticksExisted > 0 && !isEntityProcessing(world, entity.posX, entity.posZ) && !((EntityTumbleweed) entity).persistent && !entity.isRiding())
-			world.removeEntity(entity);
+		world.getEntities()
+			.filter(e -> e.getType() == Tumbleweed.TUMBLEWEED)
+			.map(t -> (EntityTumbleweed)t)
+			.filter(t -> !t.shouldPersist() && t.ticksExisted > 0 && !isEntityProcessing(world, t.posX, t.posZ))
+			.forEach(EntityTumbleweed::remove);
 	}
 
 }

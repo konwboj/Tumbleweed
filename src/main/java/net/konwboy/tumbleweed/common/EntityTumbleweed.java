@@ -1,33 +1,40 @@
 package net.konwboy.tumbleweed.common;
 
-import io.netty.buffer.ByteBuf;
-import net.minecraft.block.Block;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.SoundType;
+import net.minecraft.client.renderer.Quaternion;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityTracker;
-import net.minecraft.entity.EntityTrackerEntry;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.MoverType;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.item.EntityMinecart;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
+import net.minecraft.entity.Pose;
+import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.item.minecart.AbstractMinecartEntity;
+import net.minecraft.entity.item.minecart.MinecartEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.network.IPacket;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.IntHashMap;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.TrackedEntity;
 import net.minecraft.world.World;
-import net.minecraft.world.WorldServer;
+import net.minecraft.world.server.ChunkManager;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import org.lwjgl.util.vector.Quaternion;
-import org.lwjgl.util.vector.Vector4f;
+import net.minecraftforge.fml.network.NetworkHooks;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -49,22 +56,22 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	private static final DataParameter<Boolean> FADING = EntityDataManager.createKey(EntityTumbleweed.class, DataSerializers.BOOLEAN);
 
 	private int age;
-	public int fadeAge;
+	public int fadeProgress;
 	public boolean persistent;
 	private double windMod;
 	private int lifetime;
 	private float angularX, angularZ;
 	public float stretch = 1f, prevStretch = 1f;
 
-	@SideOnly(Side.CLIENT)
+	@OnlyIn(Dist.CLIENT)
 	public float rot1, rot2, rot3;
-	@SideOnly(Side.CLIENT)
+	@OnlyIn(Dist.CLIENT)
 	public Quaternion quat;
-	@SideOnly(Side.CLIENT)
+	@OnlyIn(Dist.CLIENT)
 	public Quaternion prevQuat;
 
-	public EntityTumbleweed(World world) {
-		super(world);
+	public EntityTumbleweed(EntityType<?> type, World world) {
+		super(type, world);
 
 		this.entityCollisionReduction = 0.95f;
 		this.preventEntitySpawning = true;
@@ -76,38 +83,38 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			this.rot2 = 360f * world.rand.nextFloat();
 			this.rot3 = 360f * world.rand.nextFloat();
 
-			this.quat = new Quaternion();
-			this.prevQuat = new Quaternion();
+			this.quat = new Quaternion(0, 0, 0, 1);
+			this.prevQuat = new Quaternion(0, 0, 0, 1);
 		}
 	}
 
 	@Override
-	protected void entityInit() {
+	protected void registerData() {
 		this.dataManager.register(SIZE, 2);
 		this.dataManager.register(CUSTOM_WIND_ENABLED, false);
 		this.dataManager.register(CUSTOM_WIND_X, 0f);
 		this.dataManager.register(CUSTOM_WIND_Z, 0f);
 		this.dataManager.register(FADING, false);
 
-		updateSize();
+		recalculateSize();
 	}
 
 	@Override
-	protected void writeEntityToNBT(NBTTagCompound nbt) {
-		nbt.setInteger("Size", getSize());
-		nbt.setBoolean("CustomWindEnabled", getCustomWindEnabled());
-		nbt.setDouble("CustomWindX", getCustomWindX());
-		nbt.setDouble("CustomWindZ", getCustomWindZ());
-		nbt.setBoolean("Persistent", persistent);
+	protected void writeAdditional(CompoundNBT nbt) {
+		nbt.putInt("Size", getSize());
+		nbt.putBoolean("CustomWindEnabled", getCustomWindEnabled());
+		nbt.putDouble("CustomWindX", getCustomWindX());
+		nbt.putDouble("CustomWindZ", getCustomWindZ());
+		nbt.putBoolean("Persistent", persistent);
 
-		AxisAlignedBB bb = this.getEntityBoundingBox();
-		nbt.setTag("AABB", this.newDoubleNBTList(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ));
+		AxisAlignedBB bb = this.getBoundingBox();
+		nbt.put("AABB", this.newDoubleNBTList(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ));
 	}
 
 	@Override
-	protected void readEntityFromNBT(NBTTagCompound nbt) {
-		if (nbt.hasKey("Size"))
-			this.dataManager.set(SIZE, nbt.getInteger("Size"));
+	protected void readAdditional(CompoundNBT nbt) {
+		if (nbt.contains("Size"))
+			this.dataManager.set(SIZE, nbt.getInt("Size"));
 
 		this.dataManager.set(CUSTOM_WIND_ENABLED, nbt.getBoolean("CustomWindEnabled"));
 		this.dataManager.set(CUSTOM_WIND_X, nbt.getFloat("CustomWindX"));
@@ -116,9 +123,9 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		persistent = nbt.getBoolean("Persistent");
 
 		// Fixes server-side collision glitches
-		if (nbt.hasKey("AABB")) {
-			NBTTagList aabb = nbt.getTagList("AABB", 6);
-			setEntityBoundingBox(new AxisAlignedBB(aabb.getDoubleAt(0), aabb.getDoubleAt(1), aabb.getDoubleAt(2), aabb.getDoubleAt(3), aabb.getDoubleAt(4), aabb.getDoubleAt(5)));
+		if (nbt.contains("AABB")) {
+			ListNBT aabb = nbt.getList("AABB", 6);
+			setBoundingBox(new AxisAlignedBB(aabb.getDouble(0), aabb.getDouble(1), aabb.getDouble(2), aabb.getDouble(3), aabb.getDouble(4), aabb.getDouble(5)));
 		}
 	}
 
@@ -127,17 +134,23 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		super.notifyDataManagerChange(key);
 
 		if (key == SIZE)
-			updateSize();
+			recalculateSize();
 	}
 
-	private void updateSize() {
+	@Override
+	public IPacket<?> createSpawnPacket() {
+		return NetworkHooks.getEntitySpawningPacket(this);
+	}
+
+	@Override
+	public EntitySize getSize(Pose pose) {
 		float mcSize = BASE_SIZE + this.getSize() * (1 / 8f);
 
 		// Fixes client-side collision glitches
 		if (world.isRemote)
 			mcSize -= 1/2048f;
 
-		this.setSize(mcSize, mcSize);
+		return EntitySize.flexible(mcSize, mcSize);
 	}
 
 	@Override
@@ -163,15 +176,16 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		this.windMod = 1.05 - 0.1 * rand.nextDouble();
 		this.lifetime = 2 * 60 * 20 + rand.nextInt(200);
+//		this.lifetime = 10;
 	}
 
 	@Override
-	public void onUpdate() {
-		super.onUpdate();
+	public void tick() {
+		super.tick();
 
 		// Fixes some cases of rubber banding
 		if (!world.isRemote && ticksExisted == 1)
-			trackerHack();
+		 	trackerHack();
 
 		if (this.world.isRemote) {
 			prevStretch = stretch;
@@ -182,34 +196,27 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		}
 
 		if (this.getRidingEntity() != null) {
-			this.motionX = 0;
-			this.motionY = 0;
-			this.motionZ = 0;
+			this.setMotion(Vec3d.ZERO);
 			return;
 		}
 
 		if (!this.isInWater())
-			this.motionY -= 0.012;
+			this.setMotion(getMotion().subtract(0, 0.012, 0));
 
-		double prevMotionX = this.motionX;
-		double prevMotionY = this.motionY;
-		double prevMotionZ = this.motionZ;
+		Vec3d prevMotion = this.getMotion();
 		boolean prevOnGround = onGround;
 
-		this.move(MoverType.SELF, motionX, motionY, motionZ);
+		this.move(MoverType.SELF, getMotion());
 
 		double windX = getCustomWindEnabled() ? getCustomWindX() : WIND_X * windMod;
 		double windZ = getCustomWindEnabled() ? getCustomWindZ() : WIND_Z * windMod;
 
 		if (this.isInWater()) {
-			this.motionY += 0.02;
-			this.motionX *= 0.95;
-			this.motionZ *= 0.95;
-
+			this.setMotion(getMotion().mul(0.95, 1, 0.95));
+			this.setMotion(getMotion().add(0, 0.02, 0));
 			windX = windZ = 0;
 		} else if (windX != 0 || windZ != 0) {
-			this.motionX = windX;
-			this.motionZ = windZ;
+			this.setMotion(windX, getMotion().y, windZ);
 		}
 
 		// Rotate
@@ -217,8 +224,8 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			if (prevOnGround != onGround)
 				stretch *= 0.75f;
 
-			float motionAngleX = (float)-prevMotionX / (width * 0.5f);
-			float motionAngleZ = (float)prevMotionZ / (width * 0.5f);
+			float motionAngleX = (float)-prevMotion.x / (getWidth() * 0.5f);
+			float motionAngleZ = (float)prevMotion.z / (getWidth() * 0.5f);
 
 			if (onGround) {
 				angularX = motionAngleX;
@@ -234,58 +241,60 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			angularX *= resistance;
 			angularZ *= resistance;
 
-			Quaternion temp = new Quaternion();
-			temp.setFromAxisAngle(new Vector4f(1, 0, 0, angularZ));
-			Quaternion.mul(temp, quat, quat);
-			temp.setFromAxisAngle(new Vector4f(0, 0, 1, angularX));
-			Quaternion.mul(temp, quat, quat);
+			Quaternion temp = new Quaternion(angularZ, 0, angularX, false);
+			temp.multiply(quat);
+			quat = temp;
 		}
 
 		// Bounce on ground
 		if (this.onGround) {
 			if (windX * windX + windZ * windZ >= 0.05 * 0.05) {
-				this.motionY = Math.max(-prevMotionY * 0.7, 0.24 - getSize() * 0.02);
+				this.setMotion(getMotion().x, Math.max(-prevMotion.y * 0.7, 0.24 - getSize() * 0.02), getMotion().z);
 			} else {
-				this.motionY = -prevMotionY * 0.7;
+				this.setMotion(getMotion().x, -prevMotion.y * 0.7, getMotion().z);
 			}
 		}
 
-		this.motionX *= 0.98;
-		this.motionY *= 0.98;
-		this.motionZ *= 0.98;
+		// Friction
+		this.setMotion(getMotion().mul(0.98, 0.98, 0.98));
 
 		collideWithNearbyEntities();
 
 		if (!this.world.isRemote) {
+			// Age faster when stuck on a wall or in water
 			this.age += (collidedHorizontally || isInWater()) ? 8 : 1;
 			tryDespawn();
 		}
 
 		if (isFading()) {
-			this.fadeAge++;
+			this.fadeProgress++;
 
-			if (this.fadeAge > FADE_TIME)
-				setDead();
+			if (this.fadeProgress > FADE_TIME)
+				remove();
 		}
 	}
 
 	private void trackerHack() {
-		EntityTrackerEntry entry = getTrackerEntry();
-		if (entry != null && entry.updateCounter == 0)
-			entry.updateCounter += 30;
+		TrackedEntity entry = getTrackerEntry();
+		try {
+			int counter = (int)updateCounter.get(entry);
+			if (entry != null && counter == 0)
+				updateCounter.set(entry, counter + 30);
+		} catch (IllegalAccessException e) {
+		}
 	}
 
 	private void tryDespawn() {
-		if (persistent) {
+		if (shouldPersist()) {
 			this.age = 0;
 			return;
 		}
 
-		EntityPlayer player = this.world.getClosestPlayerToEntity(this, -1);
+		PlayerEntity player = this.world.getClosestPlayer(this, -1);
 		if (player != null && player.getDistanceSq(this) > DESPAWN_RANGE * DESPAWN_RANGE)
-			this.setDead();
+			this.remove();
 
-		if (this.age > this.lifetime && fadeAge == 0)
+		if (this.age > this.lifetime && fadeProgress == 0)
 			this.dataManager.set(FADING, true);
 	}
 
@@ -296,12 +305,12 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 	@Override
 	public boolean attackEntityFrom(DamageSource source, float amount) {
-		if (this.isEntityInvulnerable(source)) {
+		if (this.isInvulnerableTo(source)) {
 			return false;
 		}
 
-		if (!this.isDead && !this.world.isRemote) {
-			this.setDead();
+		if (this.isAlive() && !this.world.isRemote) {
+			this.remove();
 
 			SoundType sound = SoundType.PLANT;
 			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
@@ -314,30 +323,28 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	private void dropItem() {
-		ItemStack item = TumbleweedConfig.Logic.getRandomItem();
+		ItemStack item = TumbleweedConfig.getRandomItem();
 		if (item != null) {
-			EntityItem entityitem = new EntityItem(this.world, this.posX, this.posY, this.posZ, item);
-			entityitem.motionX = 0;
-			entityitem.motionY = 0.2D;
-			entityitem.motionZ = 0;
+			ItemEntity entityitem = new ItemEntity(this.world, this.posX, this.posY, this.posZ, item);
+			entityitem.setMotion(new Vec3d(0, 0.2, 0));
 			entityitem.setDefaultPickupDelay();
-			this.world.spawnEntity(entityitem);
+			this.world.addEntity(entityitem);
 		}
 	}
 
 	@Override
 	public boolean hitByEntity(Entity entityIn) {
-		return entityIn instanceof EntityPlayer && this.attackEntityFrom(DamageSource.causePlayerDamage((EntityPlayer) entityIn), 0.0F);
+		return entityIn instanceof PlayerEntity && this.attackEntityFrom(DamageSource.causePlayerDamage((PlayerEntity) entityIn), 0.0F);
 	}
 
 	@Override
-	protected void playStepSound(BlockPos pos, Block blockIn) {
+	protected void playStepSound(BlockPos pos, BlockState blockIn) {
 		this.playSound(SoundEvents.BLOCK_GRASS_STEP, 0.15f,1.0f);
 	}
 
 	@Override
-	public boolean canTrample(World world, Block block, BlockPos pos, float fallDistance) {
-		return world.rand.nextFloat() < 0.7F && world.getGameRules().getBoolean("mobGriefing") && TumbleweedConfig.damageCrops;
+	public boolean canTrample(BlockState state, BlockPos pos, float fallDistance) {
+		return world.rand.nextFloat() < 0.7F && world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) && TumbleweedConfig.damageCrops;
 	}
 
 	@Override
@@ -346,12 +353,12 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	private void collideWithNearbyEntities() {
-		List<Entity> list = this.world.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox().expand(0.2D, 0.0D, 0.2D), Entity::canBePushed);
+		List<Entity> list = this.world.getEntitiesInAABBexcluding(this, this.getBoundingBox().expand(0.2D, 0.0D, 0.2D), Entity::canBePushed);
 
 		for (Entity entity : list) {
-			if (!this.world.isRemote && entity instanceof EntityMinecart && ((EntityMinecart) entity).getType() == EntityMinecart.Type.RIDEABLE && entity.motionX * entity.motionX + entity.motionZ * entity.motionZ > 0.01D && entity.getPassengers().isEmpty() && this.getRidingEntity() == null) {
+			if (!this.world.isRemote && entity instanceof AbstractMinecartEntity && ((AbstractMinecartEntity) entity).getMinecartType() == MinecartEntity.Type.RIDEABLE && entity.getMotion().x * entity.getMotion().x + entity.getMotion().z * entity.getMotion().z > 0.01D && entity.getPassengers().isEmpty() && this.getRidingEntity() == null) {
 				this.startRiding(entity);
-				this.motionY += 0.25;
+				this.setMotion(getMotion().add(0, 0.25, 0));
 				this.velocityChanged = true;
 			}
 
@@ -360,7 +367,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	public boolean isNotColliding() {
-		return this.world.checkNoEntityCollision(this.getEntityBoundingBox(), this) && this.world.getCollisionBoxes(this, this.getEntityBoundingBox()).isEmpty() && !this.world.containsAnyLiquid(this.getEntityBoundingBox());
+		return this.world.checkNoEntityCollision(this) && !this.world.getCollisionShapes(this, this.getBoundingBox()).findAny().isPresent() && !this.world.containsAnyLiquid(this.getBoundingBox());
 	}
 
 	public void setSize(int size) {
@@ -387,38 +394,53 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		return this.dataManager.get(FADING);
 	}
 
+	public boolean shouldPersist() {
+		return persistent || getRidingEntity() != null;
+	}
+
 	private static Field trackedEntityHashTable;
+	private static Field entryFieldLazy;
 	private static Field encodedPosX;
 	private static Field encodedPosY;
 	private static Field encodedPosZ;
+	private static Field updateCounter;
 
 	static {
-		trackedEntityHashTable = fieldsOfType(EntityTracker.class, IntHashMap.class)[0];
+		trackedEntityHashTable = fieldsOfType(ChunkManager.class, Int2ObjectMap.class)[0];
 		trackedEntityHashTable.setAccessible(true);
-		encodedPosX = fieldsOfType(EntityTrackerEntry.class, long.class)[0];
+		encodedPosX = fieldsOfType(TrackedEntity.class, long.class)[0];
 		encodedPosX.setAccessible(true);
-		encodedPosY = fieldsOfType(EntityTrackerEntry.class, long.class)[1];
+		encodedPosY = fieldsOfType(TrackedEntity.class, long.class)[1];
 		encodedPosY.setAccessible(true);
-		encodedPosZ = fieldsOfType(EntityTrackerEntry.class, long.class)[2];
+		encodedPosZ = fieldsOfType(TrackedEntity.class, long.class)[2];
 		encodedPosZ.setAccessible(true);
+
+		// Field found by index, recheck on game updates
+		updateCounter = fieldsOfType(TrackedEntity.class, int.class)[4];
+		updateCounter.setAccessible(true);
 	}
 
 	private static Field[] fieldsOfType(Class inClass, Class type){
 		return Arrays.stream(inClass.getDeclaredFields()).filter(f -> f.getType() == type).toArray(Field[]::new);
 	}
 
-	public EntityTrackerEntry getTrackerEntry() {
-		EntityTrackerEntry entry = null;
+	public TrackedEntity getTrackerEntry() {
+		TrackedEntity entry = null;
 		try {
-			entry = ((IntHashMap<EntityTrackerEntry>) trackedEntityHashTable.get(((WorldServer) world).getEntityTracker())).lookup(getEntityId());
+			Object e = ((Int2ObjectMap<?>) trackedEntityHashTable.get(((ServerWorld) world).getChunkProvider().chunkManager)).get(getEntityId());
+			if (entryFieldLazy == null) {
+				entryFieldLazy = fieldsOfType(e.getClass(), TrackedEntity.class)[0];
+				entryFieldLazy.setAccessible(true);
+			}
+			entry = (TrackedEntity)entryFieldLazy.get(e);
 		} catch(IllegalAccessException e){
 		}
 		return entry;
 	}
 
 	@Override
-	public void writeSpawnData(ByteBuf buffer) {
-		EntityTrackerEntry entry = getTrackerEntry();
+	public void writeSpawnData(PacketBuffer buffer) {
+		TrackedEntity entry = getTrackerEntry();
 
 		try {
 			buffer.writeLong((long)encodedPosX.get(entry));
@@ -429,7 +451,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	@Override
-	public void readSpawnData(ByteBuf additionalData) {
+	public void readSpawnData(PacketBuffer additionalData) {
 		// Fixes some more cases of rubber banding
 		this.serverPosX = additionalData.readLong();
 		this.serverPosY = additionalData.readLong();

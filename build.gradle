@@ -2,41 +2,35 @@ buildscript {
     repositories {
         jcenter()
         maven { url = "http://files.minecraftforge.net/maven" }
+        mavenCentral()
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'net.minecraftforge.gradle'
 
-version = "1.12-0.4.6"
+version = "1.14-0.4.6"
 group = "net.konwboy.tumbleweed"
 archivesBaseName = "tumbleweed"
 
-sourceCompatibility = targetCompatibility = '1.8'
-compileJava {
-    sourceCompatibility = targetCompatibility = '1.8'
-}
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 minecraft {
-    version = "1.12.2-14.23.5.2768"
-    mappings = "snapshot_20171003"
-    replace "@VERSION@", project.version
-    replace "@MC_VERSIONS@", "[1.11,1.12.2]"
-    replaceIn "Tumbleweed.java"
-    makeObfSourceJar = false
+    mappings channel: 'snapshot', version: '20190719-1.14.3'
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.14.4-28.1.0'
 }
 
 processResources {
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
     from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-        expand 'version': project.version, 'mcversion': project.minecraft.version
+        include 'META-INF/mods.toml'
+        expand 'version': project.version
     }
 
     from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+        exclude 'META-INF/mods.toml'
     }
 }
