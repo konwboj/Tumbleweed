@@ -55,6 +55,8 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	private int lifetime;
 	private float angularX, angularZ;
 	public float stretch = 1f, prevStretch = 1f;
+	private boolean prevOnGround;
+	private double prevMotionX, prevMotionY, prevMotionZ;
 
 	@SideOnly(Side.CLIENT)
 	public float rot1, rot2, rot3;
@@ -72,13 +74,18 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		setEntityId(getEntityId());
 
 		if (this.world.isRemote) {
-			this.rot1 = 360f * world.rand.nextFloat();
-			this.rot2 = 360f * world.rand.nextFloat();
-			this.rot3 = 360f * world.rand.nextFloat();
-
-			this.quat = new Quaternion();
-			this.prevQuat = new Quaternion();
+			initClient();
 		}
+	}
+
+	@SideOnly(Side.CLIENT)
+	private void initClient() {
+		this.rot1 = 360f * world.rand.nextFloat();
+		this.rot2 = 360f * world.rand.nextFloat();
+		this.rot3 = 360f * world.rand.nextFloat();
+
+		this.quat = new Quaternion();
+		this.prevQuat = new Quaternion();
 	}
 
 	@Override
@@ -126,7 +133,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	public void notifyDataManagerChange(DataParameter<?> key) {
 		super.notifyDataManagerChange(key);
 
-		if (key == SIZE)
+		if (key.equals(SIZE))
 			updateSize();
 	}
 
@@ -174,11 +181,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			trackerHack();
 
 		if (this.world.isRemote) {
-			prevStretch = stretch;
-			stretch *= 1.2f;
-			if (stretch > 1f) stretch = 1f;
-
-			this.prevQuat = new Quaternion(this.quat);
+			preTickClient();
 		}
 
 		if (this.getRidingEntity() != null) {
@@ -191,10 +194,10 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		if (!this.isInWater())
 			this.motionY -= 0.012;
 
-		double prevMotionX = this.motionX;
-		double prevMotionY = this.motionY;
-		double prevMotionZ = this.motionZ;
-		boolean prevOnGround = onGround;
+		prevMotionX = this.motionX;
+		prevMotionY = this.motionY;
+		prevMotionZ = this.motionZ;
+		prevOnGround = onGround;
 
 		this.move(MoverType.SELF, motionX, motionY, motionZ);
 
@@ -214,31 +217,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		// Rotate
 		if (this.world.isRemote) {
-			if (prevOnGround != onGround)
-				stretch *= 0.75f;
-
-			float motionAngleX = (float)-prevMotionX / (width * 0.5f);
-			float motionAngleZ = (float)prevMotionZ / (width * 0.5f);
-
-			if (onGround) {
-				angularX = motionAngleX;
-				angularZ = motionAngleZ;
-			}
-
-			if (isInWater()) {
-				angularX += motionAngleX * 0.2f;
-				angularZ += motionAngleZ * 0.2f;
-			}
-
-			float resistance = isInWater() ? 0.9f : 0.96f;
-			angularX *= resistance;
-			angularZ *= resistance;
-
-			Quaternion temp = new Quaternion();
-			temp.setFromAxisAngle(new Vector4f(1, 0, 0, angularZ));
-			Quaternion.mul(temp, quat, quat);
-			temp.setFromAxisAngle(new Vector4f(0, 0, 1, angularX));
-			Quaternion.mul(temp, quat, quat);
+			tickClient();
 		}
 
 		// Bounce on ground
@@ -267,6 +246,44 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			if (this.fadeAge > FADE_TIME)
 				setDead();
 		}
+	}
+
+	@SideOnly(Side.CLIENT)
+	private void preTickClient() {
+		prevStretch = stretch;
+		stretch *= 1.2f;
+		if (stretch > 1f) stretch = 1f;
+
+		this.prevQuat = new Quaternion(this.quat);
+	}
+
+	@SideOnly(Side.CLIENT)
+	private void tickClient() {
+		if (prevOnGround != onGround)
+			stretch *= 0.75f;
+
+		float motionAngleX = (float)-prevMotionX / (width * 0.5f);
+		float motionAngleZ = (float)prevMotionZ / (width * 0.5f);
+
+		if (onGround) {
+			angularX = motionAngleX;
+			angularZ = motionAngleZ;
+		}
+
+		if (isInWater()) {
+			angularX += motionAngleX * 0.2f;
+			angularZ += motionAngleZ * 0.2f;
+		}
+
+		float resistance = isInWater() ? 0.9f : 0.96f;
+		angularX *= resistance;
+		angularZ *= resistance;
+
+		Quaternion temp = new Quaternion();
+		temp.setFromAxisAngle(new Vector4f(1, 0, 0, angularZ));
+		Quaternion.mul(temp, quat, quat);
+		temp.setFromAxisAngle(new Vector4f(0, 0, 1, angularX));
+		Quaternion.mul(temp, quat, quat);
 	}
 
 	private void trackerHack() {
