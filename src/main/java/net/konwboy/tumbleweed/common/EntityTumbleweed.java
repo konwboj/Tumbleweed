@@ -62,6 +62,8 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	private int lifetime;
 	private float angularX, angularZ;
 	public float stretch = 1f, prevStretch = 1f;
+	private boolean prevOnGround;
+	private Vec3d prevMotion = Vec3d.ZERO;
 
 	@OnlyIn(Dist.CLIENT)
 	public float rot1, rot2, rot3;
@@ -79,13 +81,18 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		setEntityId(getEntityId());
 
 		if (this.world.isRemote) {
-			this.rot1 = 360f * world.rand.nextFloat();
-			this.rot2 = 360f * world.rand.nextFloat();
-			this.rot3 = 360f * world.rand.nextFloat();
-
-			this.quat = new Quaternion(0, 0, 0, 1);
-			this.prevQuat = new Quaternion(0, 0, 0, 1);
+			initClient();
 		}
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	private void initClient() {
+		this.rot1 = 360f * world.rand.nextFloat();
+		this.rot2 = 360f * world.rand.nextFloat();
+		this.rot3 = 360f * world.rand.nextFloat();
+
+		this.quat = new Quaternion(0, 0, 0, 1);
+		this.prevQuat = new Quaternion(0, 0, 0, 1);
 	}
 
 	@Override
@@ -133,7 +140,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	public void notifyDataManagerChange(DataParameter<?> key) {
 		super.notifyDataManagerChange(key);
 
-		if (key == SIZE)
+		if (key.equals(SIZE))
 			recalculateSize();
 	}
 
@@ -176,7 +183,6 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		this.windMod = 1.05 - 0.1 * rand.nextDouble();
 		this.lifetime = 2 * 60 * 20 + rand.nextInt(200);
-//		this.lifetime = 10;
 	}
 
 	@Override
@@ -188,11 +194,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		 	trackerHack();
 
 		if (this.world.isRemote) {
-			prevStretch = stretch;
-			stretch *= 1.2f;
-			if (stretch > 1f) stretch = 1f;
-
-			this.prevQuat = new Quaternion(this.quat);
+			preTickClient();
 		}
 
 		if (this.getRidingEntity() != null) {
@@ -203,8 +205,8 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		if (!this.isInWater())
 			this.setMotion(getMotion().subtract(0, 0.012, 0));
 
-		Vec3d prevMotion = this.getMotion();
-		boolean prevOnGround = onGround;
+		prevMotion = this.getMotion();
+		prevOnGround = onGround;
 
 		this.move(MoverType.SELF, getMotion());
 
@@ -221,29 +223,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		// Rotate
 		if (this.world.isRemote) {
-			if (prevOnGround != onGround)
-				stretch *= 0.75f;
-
-			float motionAngleX = (float)-prevMotion.x / (getWidth() * 0.5f);
-			float motionAngleZ = (float)prevMotion.z / (getWidth() * 0.5f);
-
-			if (onGround) {
-				angularX = motionAngleX;
-				angularZ = motionAngleZ;
-			}
-
-			if (isInWater()) {
-				angularX += motionAngleX * 0.2f;
-				angularZ += motionAngleZ * 0.2f;
-			}
-
-			float resistance = isInWater() ? 0.9f : 0.96f;
-			angularX *= resistance;
-			angularZ *= resistance;
-
-			Quaternion temp = new Quaternion(angularZ, 0, angularX, false);
-			temp.multiply(quat);
-			quat = temp;
+			tickClient();
 		}
 
 		// Bounce on ground
@@ -272,6 +252,42 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			if (this.fadeProgress > FADE_TIME)
 				remove();
 		}
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	private void preTickClient() {
+		prevStretch = stretch;
+		stretch *= 1.2f;
+		if (stretch > 1f) stretch = 1f;
+
+		this.prevQuat = new Quaternion(this.quat);
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	private void tickClient() {
+		if (prevOnGround != onGround)
+			stretch *= 0.75f;
+
+		float motionAngleX = (float)-prevMotion.x / (getWidth() * 0.5f);
+		float motionAngleZ = (float)prevMotion.z / (getWidth() * 0.5f);
+
+		if (onGround) {
+			angularX = motionAngleX;
+			angularZ = motionAngleZ;
+		}
+
+		if (isInWater()) {
+			angularX += motionAngleX * 0.2f;
+			angularZ += motionAngleZ * 0.2f;
+		}
+
+		float resistance = isInWater() ? 0.9f : 0.96f;
+		angularX *= resistance;
+		angularZ *= resistance;
+
+		Quaternion temp = new Quaternion(angularZ, 0, angularX, false);
+		temp.multiply(quat);
+		quat = temp;
 	}
 
 	private void trackerHack() {
