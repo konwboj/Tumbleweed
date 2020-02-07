@@ -10,6 +10,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
@@ -155,7 +156,7 @@ public class TumbleweedSpawner {
 		if (event.phase != TickEvent.Phase.END)
 			return;
 
-		if (world.getGameTime() % TRY_SPAWN_TICKS == 7) {
+		if (world.getGameTime() % TRY_SPAWN_TICKS == 7 && world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) {
 			world.getProfiler().startSection("spawn_tumbleweed");
 			trySpawn(world);
 			world.getProfiler().endSection();
