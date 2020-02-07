@@ -156,7 +156,7 @@ public class TumbleweedSpawner {
 		if (event.phase != TickEvent.Phase.END)
 			return;
 
-		if (world.getTotalWorldTime() % TRY_SPAWN_TICKS == 7) {
+		if (world.getTotalWorldTime() % TRY_SPAWN_TICKS == 7 && world.getGameRules().getBoolean("doMobSpawning")) {
 			world.profiler.startSection("spawn_tumbleweed");
 			trySpawn(world);
 			world.profiler.endSection();
