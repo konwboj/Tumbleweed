@@ -44,7 +44,7 @@ public class Tumbleweed {
 
 	@SubscribeEvent
 	public static void clientSetup(FMLClientSetupEvent event) {
-		RenderingRegistry.registerEntityRenderingHandler(EntityTumbleweed.class, new RenderTumbleweed.Factory());
+		RenderingRegistry.registerEntityRenderingHandler(TUMBLEWEED, new RenderTumbleweed.Factory());
 	}
 
 	@SubscribeEvent

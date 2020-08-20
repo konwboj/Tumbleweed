@@ -249,8 +249,9 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		if (isFading()) {
 			this.fadeProgress++;
 
-			if (this.fadeProgress > FADE_TIME)
+			if (this.fadeProgress > FADE_TIME) {
 				remove();
+			}
 		}
 	}
 
@@ -331,7 +332,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			SoundType sound = SoundType.PLANT;
 			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
 
-			if (TumbleweedConfig.enableDrops)
+			if (TumbleweedConfig.enableDrops && (!TumbleweedConfig.dropOnlyByPlayer || source.getTrueSource() instanceof PlayerEntity))
 				dropItem();
 		}
 
@@ -341,10 +342,10 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	private void dropItem() {
 		ItemStack item = TumbleweedConfig.getRandomItem();
 		if (item != null) {
-			ItemEntity entityitem = new ItemEntity(this.world, this.posX, this.posY, this.posZ, item);
-			entityitem.setMotion(new Vec3d(0, 0.2, 0));
-			entityitem.setDefaultPickupDelay();
-			this.world.addEntity(entityitem);
+			ItemEntity itemEntity = new ItemEntity(this.world, this.getPosX(), this.getPosY(), this.getPosZ(), item);
+			itemEntity.setMotion(new Vec3d(0, 0.2, 0));
+			itemEntity.setDefaultPickupDelay();
+			this.world.addEntity(itemEntity);
 		}
 	}
 

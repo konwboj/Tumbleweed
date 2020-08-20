@@ -1,53 +1,53 @@
 package net.konwboy.tumbleweed.client;
 
-import net.minecraft.client.renderer.entity.model.RendererModel;
-import net.minecraft.client.renderer.model.Model;
+import com.google.common.collect.Lists;
+import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.IVertexBuilder;
+import net.minecraft.client.renderer.model.ModelRenderer;
 
-public class ModelTumbleweed extends Model {
+import java.util.List;
 
-	public ModelTumbleweed(float scale) {
-		this.textureHeight = 16;
-		this.textureWidth = 16;
+public class ModelTumbleweed {
 
+	private List<ModelRenderer> boxList = Lists.newArrayList();
+
+	public ModelTumbleweed(float expand) {
 		{
-			RendererModel box = new RendererModel(this);
-			box.addBox(0, -8, -8, 0, 16, 16, scale);
-			box.addBox(-8, 0, -8, 16, 0, 16, scale);
-			box.addBox(-8, -8, 0, 16, 16, 0, scale);
+			ModelRenderer box = new ModelRenderer(16,16,0,0);
+			box.addBox(0, -8, -8, 0, 16, 16, expand);
+			box.addBox(-8, 0, -8, 16, 0, 16, expand);
+			box.addBox(-8, -8, 0, 16, 16, 0, expand);
 			this.boxList.add(box);
 		}
 
 		{
-			RendererModel box = new RendererModel(this);
-			box.addBox(0, -8, -8, 0, 16, 16, scale);
-			box.addBox(-8, -8, 0, 16, 16, 0, scale);
+			ModelRenderer box = new ModelRenderer(16,16,0,0);
+			box.addBox(0, -8, -8, 0, 16, 16, expand);
+			box.addBox(-8, -8, 0, 16, 16, 0, expand);
 			box.rotateAngleY = (float) Math.toRadians(45);
 			this.boxList.add(box);
 		}
 
 		{
-			RendererModel box = new RendererModel(this);
-			box.addBox(0, -8, -8, 0, 16, 16, scale);
-			box.addBox(-8, 0, -8, 16, 0, 16, scale);
+			ModelRenderer box = new ModelRenderer(16,16,0,0);
+			box.addBox(0, -8, -8, 0, 16, 16, expand);
+			box.addBox(-8, 0, -8, 16, 0, 16, expand);
 			box.rotateAngleZ = (float) Math.toRadians(45);
 			this.boxList.add(box);
 		}
 
 		{
-			RendererModel box = new RendererModel(this);
-			box.addBox(-8, 0, -8, 16, 0, 16, scale);
-			box.addBox(-8, -8, 0, 16, 16, 0, scale);
+			ModelRenderer box = new ModelRenderer(16,16,0,0);
+			box.addBox(-8, 0, -8, 16, 0, 16, expand);
+			box.addBox(-8, -8, 0, 16, 16, 0, expand);
 			box.rotateAngleX = (float) Math.toRadians(45);
 			this.boxList.add(box);
 		}
 	}
 
-	public void render(float scale) {
-		for (RendererModel box : boxList)
-			box.render(scale);
+	public void render(MatrixStack matrixStackIn, IVertexBuilder bufferIn, int packedLightIn, int packedOverlayIn, float red, float green, float blue, float alpha) {
+		for (ModelRenderer box : boxList)
+			box.render(matrixStackIn, bufferIn, packedLightIn, packedOverlayIn, red, green, blue, alpha);
 	}
 
-	public int getV() {
-		return 55;
-	}
 }

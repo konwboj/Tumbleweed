@@ -40,8 +40,8 @@ public class TumbleweedSpawner {
 			if (entityplayer.isSpectator())
 				continue;
 
-			int playerX = MathHelper.floor(entityplayer.posX / 16d);
-			int playerZ = MathHelper.floor(entityplayer.posZ / 16d);
+			int playerX = MathHelper.floor(entityplayer.getPosX() / 16d);
+			int playerZ = MathHelper.floor(entityplayer.getPosZ() / 16d);
 
 			for (int x = 8; x >= -8; x--) {
 				for (int z = 8; z >= -8; z--) {
@@ -69,7 +69,7 @@ public class TumbleweedSpawner {
 		List<ChunkPos> chunkList = Lists.newArrayList(eligibleChunksForSpawning);
 		Collections.shuffle(chunkList);
 
-		BlockPos worldSpawn = world.getSpawnPoint();
+		BlockPos worldSpawn = new BlockPos(world.getWorldInfo().getSpawnX(), world.getWorldInfo().getSpawnY(), world.getWorldInfo().getSpawnZ());
 		long current = world.getEntities().filter(e -> e.getType() == Tumbleweed.TUMBLEWEED).count();
 		int max = MathHelper.ceil(TumbleweedConfig.maxPerPlayer * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
 
@@ -166,7 +166,7 @@ public class TumbleweedSpawner {
 		world.getEntities()
 			.filter(e -> e.getType() == Tumbleweed.TUMBLEWEED)
 			.map(t -> (EntityTumbleweed)t)
-			.filter(t -> !t.shouldPersist() && t.ticksExisted > 0 && !isEntityProcessing(world, t.posX, t.posZ))
+			.filter(t -> !t.shouldPersist() && t.ticksExisted > 0 && !isEntityProcessing(world, t.getPosX(), t.getPosZ()))
 			.forEach(EntityTumbleweed::remove);
 	}
 

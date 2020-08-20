@@ -1,106 +1,76 @@
 package net.konwboy.tumbleweed.client;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.IVertexBuilder;
 import net.konwboy.tumbleweed.Tumbleweed;
 import net.konwboy.tumbleweed.common.EntityTumbleweed;
-import net.minecraft.client.renderer.Matrix4f;
-import net.minecraft.client.renderer.Quaternion;
+import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.RenderState;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.Vector3f;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.client.renderer.vertex.VertexFormat;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
+import net.minecraftforge.common.model.TransformationHelper;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
 import org.lwjgl.opengl.GL11;
 
 public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 
 	private static final ResourceLocation TEXTURE = new ResourceLocation(Tumbleweed.MOD_ID, "textures/entity/tumbleweed.png");
-
-	private ModelTumbleweed tumbleweed;
-	private int lastV = 0;
+	private ModelTumbleweed tumbleweed = new ModelTumbleweed(0);
 
 	public RenderTumbleweed(EntityRendererManager manager) {
 		super(manager);
 		this.shadowSize = 0.4f;
 		this.shadowOpaque = 0.8f;
-		this.tumbleweed = new ModelTumbleweed(0);
-		this.lastV = this.tumbleweed.getV();
 	}
 
 	@Override
-	public void doRender(EntityTumbleweed entity, double x, double y, double z, float yaw, float partialTicks) {
-		if (lastV != tumbleweed.getV()) {
-			this.tumbleweed = new ModelTumbleweed(0);
-			this.lastV = tumbleweed.getV();
-		}
-
+	public void render(EntityTumbleweed entity, float entityYaw, float partialTicks, MatrixStack matrixStack, IRenderTypeBuffer bufferIn, int packedLightIn) {
+		float alpha = (1f - entity.fadeProgress / (float) EntityTumbleweed.FADE_TIME) * 0.7f;
+		this.shadowOpaque = alpha;
 		this.shadowSize = entity.getWidth() * 0.5f;
 
-		GlStateManager.pushMatrix();
-
-		GlStateManager.disableLighting();
-		GlStateManager.enableBlend();
-		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
-		float alpha = 1f - entity.fadeProgress / (float) EntityTumbleweed.FADE_TIME;
-		alpha *= 0.7f;
-
-		this.shadowOpaque = alpha;
-
-		GlStateManager.color4f(1f, 1f, 1f, alpha);
-		GlStateManager.translated(x, y + entity.getHeight() * 0.3f, z);
+		matrixStack.push();
 
 		float size = 1.0f + entity.getSize() / 8f;
-		GlStateManager.scaled(size, size, size);
-
 		float stretch = MathHelper.lerp(partialTicks, entity.prevStretch, entity.stretch);
-		GlStateManager.scaled(1f, stretch, 1f);
 
-		GlStateManager.multMatrix(new Matrix4f(lerp(entity.prevQuat, entity.quat, partialTicks)));
+		matrixStack.translate(0,entity.getHeight() * 0.3f,0);
+		matrixStack.scale(size, size, size);
+		matrixStack.scale(1, stretch, 1);
 
-		GlStateManager.rotated(entity.rot1, 1, 0, 0);
-		GlStateManager.rotated(entity.rot2, 0, 1, 0);
-		GlStateManager.rotated(entity.rot3, 0, 0, 1);
+		matrixStack.rotate(TransformationHelper.slerp(entity.prevQuat, entity.quat, partialTicks));
 
-		this.bindTexture(TEXTURE);
-		this.tumbleweed.render(0.0625F);
+		matrixStack.rotate(Vector3f.XP.rotationDegrees(entity.rot1));
+		matrixStack.rotate(Vector3f.YP.rotationDegrees(entity.rot2));
+		matrixStack.rotate(Vector3f.ZP.rotationDegrees(entity.rot3));
 
-		GlStateManager.disableBlend();
-		GlStateManager.enableLighting();
-		GlStateManager.popMatrix();
+		IVertexBuilder buf = bufferIn.getBuffer(TumbleweedRenderType.TUMBLEWEED);
+		this.tumbleweed.render(
+				matrixStack,
+				buf,
+				packedLightIn,
+				OverlayTexture.NO_OVERLAY,
+				1,
+				1,
+				1,
+				alpha
+		);
 
-		super.doRender(entity, x, y, z, yaw, partialTicks);
+		matrixStack.pop();
+
+		super.render(entity, entityYaw, partialTicks, matrixStack, bufferIn, packedLightIn);
 	}
 
 	@Override
-	protected ResourceLocation getEntityTexture(EntityTumbleweed entity) {
+	public ResourceLocation getEntityTexture(EntityTumbleweed entity) {
 		return TEXTURE;
-	}
-
-	public static Quaternion lerp(Quaternion start, Quaternion end, float alpha) {
-		final float d = start.getX() * end.getX() + start.getY() * end.getY() + start.getZ() * end.getZ() + start.getW() * end.getW();
-		float absDot = d < 0.f ? -d : d;
-
-		float scale0 = 1f - alpha;
-		float scale1 = alpha;
-
-		if ((1 - absDot) > 0.1) {
-			final float angle = (float) Math.acos(absDot);
-			final float invSinTheta = 1f / (float) Math.sin(angle);
-
-			scale0 = ((float) Math.sin((1f - alpha) * angle) * invSinTheta);
-			scale1 = ((float) Math.sin((alpha * angle)) * invSinTheta);
-		}
-
-		if (d < 0.f)
-			scale1 = -scale1;
-
-		return new Quaternion(
-				(scale0 * start.getX()) + (scale1 * end.getX()),
-				(scale0 * start.getY()) + (scale1 * end.getY()),
-				(scale0 * start.getZ()) + (scale1 * end.getZ()),
-				(scale0 * start.getW()) + (scale1 * end.getW())
-		);
 	}
 
 	public static class Factory implements IRenderFactory<EntityTumbleweed> {
@@ -110,4 +80,30 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 			return new RenderTumbleweed(manager);
 		}
 	}
+
+	// Goes around member visibility
+	public static class TumbleweedRenderType extends RenderType
+	{
+		private static final RenderType TUMBLEWEED =
+				RenderType.
+						makeType(
+								"tumbleweed",
+								DefaultVertexFormats.ENTITY,
+								GL11.GL_QUADS,
+								256,
+								true,
+								false,
+								RenderType.State.
+										getBuilder().
+										texture(new RenderState.TextureState(TEXTURE, false, false)).
+										transparency(RenderState.TRANSLUCENT_TRANSPARENCY).
+										alpha(RenderState.DEFAULT_ALPHA).
+										build(true)
+						);
+
+		private TumbleweedRenderType(String nameIn, VertexFormat formatIn, int drawModeIn, int bufferSizeIn, boolean useDelegateIn, boolean needsSortingIn, Runnable setupTaskIn, Runnable clearTaskIn) {
+			super(nameIn, formatIn, drawModeIn, bufferSizeIn, useDelegateIn, needsSortingIn, setupTaskIn, clearTaskIn);
+		}
+	}
+
 }

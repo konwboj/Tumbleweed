@@ -25,14 +25,16 @@ import java.util.Set;
 public class TumbleweedConfig {
 
 	public static double spawnChance;
+	public static int maxPerPlayer;
 	public static boolean enableDrops;
 	public static boolean damageCrops;
-	public static int maxPerPlayer;
+	public static boolean dropOnlyByPlayer;
 
 	private static final ForgeConfigSpec.ConfigValue<Double> SPAWN_CHANCE;
 	private static final ForgeConfigSpec.ConfigValue<Integer> MAX_PER_PLAYER;
 	private static final ForgeConfigSpec.ConfigValue<Boolean> ENABLE_DROPS;
 	private static final ForgeConfigSpec.ConfigValue<Boolean> DAMAGE_CROPS;
+	private static final ForgeConfigSpec.ConfigValue<Boolean> DROP_ONLY_BY_PLAYER;
 	private static final ForgeConfigSpec.ConfigValue<List<String>> DROP_DATA;
 	private static final ForgeConfigSpec.ConfigValue<List<String>> BLOCK_DATA;
 	private static final ForgeConfigSpec.ConfigValue<List<String>> BIOME_DATA;
@@ -64,16 +66,28 @@ public class TumbleweedConfig {
 				.comment("Should tumbleweeds damage crops.")
 				.define("damageCrops", true);
 
+		DROP_ONLY_BY_PLAYER = builder
+				.comment("Drop items only when destroyed by player (normally also drops on lava and cactus damage, for example).")
+				.define("dropOnlyByPlayer", false);
+
 		DROP_DATA = builder
-				.comment("These items will drop from a tumbleweed upon destroying. The identifier can include an NBT compound. The amount parameter is optional.", "Example entry: 2 minecraft:arrow{display:{Name:'{\"text\":\"Cool arrow\"}'}} 20")
+				.comment(
+						"These items will drop from a tumbleweed upon destroying. The identifier can include an NBT compound. The amount parameter is optional.",
+						"weight item amount",
+						"Example entry: 2 minecraft:arrow{display:{Name:'{\"text\":\"Cool arrow\"}'}} 20")
 				.define("drops", Lists.newArrayList(DEFAULT_DROPS));
 
 		BLOCK_DATA = builder
-				.comment("Blocks from which tumbleweeds can spawn. Only works with non-solid blocks.", "<mod>:<block>")
+				.comment(
+						"Blocks in which tumbleweeds can spawn. Only works with non-solid blocks.",
+						"The actual location also requires sky access and a solid block below it.",
+						"<mod>:<block>")
 				.define("spawningBlocks", Lists.newArrayList(DEFAULT_BLOCKS));
 
 		BIOME_DATA = builder
-				.comment("If not empty, tumbleweeds spawn ONLY in the specified biomes. Else they appear in all hot, dry biomes.", "Example entry: minecraft:desert")
+				.comment(
+						"If not empty, tumbleweeds spawn ONLY in the specified biomes. Else they appear in all hot, dry biomes.",
+						"Example entry: minecraft:desert")
 				.define("biomeWhitelist", Lists.newArrayList());
 
 		SPEC = builder.build();
@@ -100,6 +114,7 @@ public class TumbleweedConfig {
 		maxPerPlayer = MAX_PER_PLAYER.get();
 		enableDrops = ENABLE_DROPS.get();
 		damageCrops = DAMAGE_CROPS.get();
+		dropOnlyByPlayer = DROP_ONLY_BY_PLAYER.get();
 
 		for (String s : DROP_DATA.get()) {
 			String[] itemData = s.split(" ");
@@ -186,7 +201,7 @@ public class TumbleweedConfig {
 	}
 
 	@SubscribeEvent
-	public static void configReloading(ModConfig.ConfigReloading event) {
+	public static void configReloading(ModConfig.Reloading event) {
 		if (event.getConfig().getSpec() == SPEC) {
 			TumbleweedConfig.load();
 		}
