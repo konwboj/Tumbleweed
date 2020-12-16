@@ -6,10 +6,11 @@ import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.RegistryKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
@@ -23,6 +24,7 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Mod.EventBusSubscriber
@@ -57,8 +59,8 @@ public class TumbleweedSpawner {
 					if (!isEntityProcessing(world, chunk.x * 16, chunk.z * 16))
 						continue;
 
-					Biome biome = world.getBiome(chunk.getBlock(8, 0, 8));
-					if (!isValidBiome(biome))
+					Optional<RegistryKey<Biome>> biome = world.func_242406_i(new BlockPos(chunk.getXStart() + 8, 0, chunk.getZStart() + 8));
+					if (!biome.isPresent() || !isValidBiome(biome.get()))
 						continue;
 
 					eligibleChunksForSpawning.add(chunk);
@@ -112,7 +114,7 @@ public class TumbleweedSpawner {
 				if (!world.getBlockState(new BlockPos(x, y - 1, z)).isSolid())
 					continue;
 
-				if (world.isPlayerWithin(x, y, z, 32) || worldSpawn.distanceSq(new Vec3i(x, y, z)) < 24.0 * 24.0)
+				if (world.isPlayerWithin(x, y, z, 32) || worldSpawn.distanceSq(new Vector3i(x, y, z)) < 24.0 * 24.0)
 					continue;
 
 				EntityTumbleweed entity = Tumbleweed.TUMBLEWEED.create(world);
@@ -131,9 +133,9 @@ public class TumbleweedSpawner {
 		}
 	}
 
-	private static boolean isValidBiome(Biome biome) {
+	private static boolean isValidBiome(RegistryKey<Biome> biome) {
 		boolean rightType = BiomeDictionary.hasType(biome, BiomeDictionary.Type.DRY) || BiomeDictionary.hasType(biome, BiomeDictionary.Type.SANDY);
-		return TumbleweedConfig.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.biomeWhitelist.contains(biome.getRegistryName());
+		return TumbleweedConfig.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.biomeWhitelist.contains(biome.getLocation());
 	}
 
 	private static BlockPos getRandomSurfacePosition(World world, int chunkX, int chunkZ) {

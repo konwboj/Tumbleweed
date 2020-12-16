@@ -5,23 +5,22 @@ import com.mojang.blaze3d.vertex.IVertexBuilder;
 import net.konwboy.tumbleweed.Tumbleweed;
 import net.konwboy.tumbleweed.common.EntityTumbleweed;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.RenderState;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Vector3f;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.client.renderer.vertex.VertexFormat;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3f;
+import net.minecraftforge.client.ForgeRenderTypes;
 import net.minecraftforge.common.model.TransformationHelper;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
-import org.lwjgl.opengl.GL11;
 
 public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 
 	private static final ResourceLocation TEXTURE = new ResourceLocation(Tumbleweed.MOD_ID, "textures/entity/tumbleweed.png");
+	private static RenderType TUMBLEWEED = ForgeRenderTypes.getUnlitTranslucent(TEXTURE, false);
+
 	private ModelTumbleweed tumbleweed = new ModelTumbleweed(0);
 
 	public RenderTumbleweed(EntityRendererManager manager) {
@@ -51,7 +50,7 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 		matrixStack.rotate(Vector3f.YP.rotationDegrees(entity.rot2));
 		matrixStack.rotate(Vector3f.ZP.rotationDegrees(entity.rot3));
 
-		IVertexBuilder buf = bufferIn.getBuffer(TumbleweedRenderType.TUMBLEWEED);
+		IVertexBuilder buf = bufferIn.getBuffer(TUMBLEWEED);
 		this.tumbleweed.render(
 				matrixStack,
 				buf,
@@ -78,31 +77,6 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 		@Override
 		public EntityRenderer<EntityTumbleweed> createRenderFor(EntityRendererManager manager) {
 			return new RenderTumbleweed(manager);
-		}
-	}
-
-	// Goes around member visibility
-	public static class TumbleweedRenderType extends RenderType
-	{
-		private static final RenderType TUMBLEWEED =
-				RenderType.
-						makeType(
-								"tumbleweed",
-								DefaultVertexFormats.ENTITY,
-								GL11.GL_QUADS,
-								256,
-								true,
-								false,
-								RenderType.State.
-										getBuilder().
-										texture(new RenderState.TextureState(TEXTURE, false, false)).
-										transparency(RenderState.TRANSLUCENT_TRANSPARENCY).
-										alpha(RenderState.DEFAULT_ALPHA).
-										build(true)
-						);
-
-		private TumbleweedRenderType(String nameIn, VertexFormat formatIn, int drawModeIn, int bufferSizeIn, boolean useDelegateIn, boolean needsSortingIn, Runnable setupTaskIn, Runnable clearTaskIn) {
-			super(nameIn, formatIn, drawModeIn, bufferSizeIn, useDelegateIn, needsSortingIn, setupTaskIn, clearTaskIn);
 		}
 	}
 

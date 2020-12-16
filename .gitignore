@@ -2,5 +2,7 @@
 *.jar
 /.gradle
 /build
+/gradle
 *.txt
 *.xml
+gradlew

@@ -1,5 +1,6 @@
 modLoader="javafml"
-loaderVersion="[31,)"
+loaderVersion="[35,)"
+license="GNU GPLv3"
 
 [[mods]]
 modId="tumbleweed"

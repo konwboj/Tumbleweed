@@ -3,7 +3,6 @@ package net.konwboy.tumbleweed.common;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.SoundType;
-import net.minecraft.client.renderer.Quaternion;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
 import net.minecraft.entity.EntityType;
@@ -25,7 +24,8 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Quaternion;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.TrackedEntity;
 import net.minecraft.world.World;
@@ -63,7 +63,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	private float angularX, angularZ;
 	public float stretch = 1f, prevStretch = 1f;
 	private boolean prevOnGround;
-	private Vec3d prevMotion = Vec3d.ZERO;
+	private Vector3d prevMotion = Vector3d.ZERO;
 
 	@OnlyIn(Dist.CLIENT)
 	public float rot1, rot2, rot3;
@@ -161,11 +161,6 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	@Override
-	public AxisAlignedBB getCollisionBox(Entity entityIn) {
-		return null;
-	}
-
-	@Override
 	public boolean canBeCollidedWith() {
 		return true;
 	}
@@ -198,7 +193,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		}
 
 		if (this.getRidingEntity() != null) {
-			this.setMotion(Vec3d.ZERO);
+			this.setMotion(Vector3d.ZERO);
 			return;
 		}
 
@@ -343,7 +338,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		ItemStack item = TumbleweedConfig.getRandomItem();
 		if (item != null) {
 			ItemEntity itemEntity = new ItemEntity(this.world, this.getPosX(), this.getPosY(), this.getPosZ(), item);
-			itemEntity.setMotion(new Vec3d(0, 0.2, 0));
+			itemEntity.setMotion(new Vector3d(0, 0.2, 0));
 			itemEntity.setDefaultPickupDelay();
 			this.world.addEntity(itemEntity);
 		}
@@ -470,9 +465,11 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	@Override
 	public void readSpawnData(PacketBuffer additionalData) {
 		// Fixes some more cases of rubber banding
-		this.serverPosX = additionalData.readLong();
-		this.serverPosY = additionalData.readLong();
-		this.serverPosZ = additionalData.readLong();
+		this.setPacketCoordinates(
+				additionalData.readLong() / 4096.0D,
+				additionalData.readLong() / 4096.0D,
+				additionalData.readLong() / 4096.0D
+		);
 	}
 
 }
