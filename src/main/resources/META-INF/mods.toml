@@ -1,10 +1,10 @@
 modLoader="javafml"
-loaderVersion="[35,)"
+loaderVersion="[37,)"
 license="GNU GPLv3"
 
 [[mods]]
 modId="tumbleweed"
-version="${version}"
+version="1.17-0.4.10" # Remember to update in build.gradle
 displayName="Tumbleweed"
 logoFile="logo.png"
 authors="konwboy"

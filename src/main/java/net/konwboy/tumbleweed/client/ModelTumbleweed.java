@@ -1,53 +1,69 @@
 package net.konwboy.tumbleweed.client;
 
-import com.google.common.collect.Lists;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
-import net.minecraft.client.renderer.model.ModelRenderer;
+import net.konwboy.tumbleweed.common.EntityTumbleweed;
+import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
 
-import java.util.List;
+public class ModelTumbleweed extends HierarchicalModel<EntityTumbleweed> {
 
-public class ModelTumbleweed {
+	private final ModelPart root;
 
-	private List<ModelRenderer> boxList = Lists.newArrayList();
-
-	public ModelTumbleweed(float expand) {
-		{
-			ModelRenderer box = new ModelRenderer(16,16,0,0);
-			box.addBox(0, -8, -8, 0, 16, 16, expand);
-			box.addBox(-8, 0, -8, 16, 0, 16, expand);
-			box.addBox(-8, -8, 0, 16, 16, 0, expand);
-			this.boxList.add(box);
-		}
-
-		{
-			ModelRenderer box = new ModelRenderer(16,16,0,0);
-			box.addBox(0, -8, -8, 0, 16, 16, expand);
-			box.addBox(-8, -8, 0, 16, 16, 0, expand);
-			box.rotateAngleY = (float) Math.toRadians(45);
-			this.boxList.add(box);
-		}
-
-		{
-			ModelRenderer box = new ModelRenderer(16,16,0,0);
-			box.addBox(0, -8, -8, 0, 16, 16, expand);
-			box.addBox(-8, 0, -8, 16, 0, 16, expand);
-			box.rotateAngleZ = (float) Math.toRadians(45);
-			this.boxList.add(box);
-		}
-
-		{
-			ModelRenderer box = new ModelRenderer(16,16,0,0);
-			box.addBox(-8, 0, -8, 16, 0, 16, expand);
-			box.addBox(-8, -8, 0, 16, 16, 0, expand);
-			box.rotateAngleX = (float) Math.toRadians(45);
-			this.boxList.add(box);
-		}
+	public ModelTumbleweed(ModelPart root) {
+		this.root = root;
 	}
 
-	public void render(MatrixStack matrixStackIn, IVertexBuilder bufferIn, int packedLightIn, int packedOverlayIn, float red, float green, float blue, float alpha) {
-		for (ModelRenderer box : boxList)
-			box.render(matrixStackIn, bufferIn, packedLightIn, packedOverlayIn, red, green, blue, alpha);
+	public static LayerDefinition createLayer() {
+		MeshDefinition mesh = new MeshDefinition();
+		PartDefinition parts = mesh.getRoot();
+
+		var expand = new CubeDeformation(0.1f); // Prevents z-fighting
+		float pi = (float)Math.PI;
+
+		parts.addOrReplaceChild("planes1",
+				CubeListBuilder.create()
+						.addBox(0, -8, -8, 0, 16, 16, expand)
+						.addBox(-8, 0, -8, 16, 0, 16, expand)
+						.addBox(-8, -8, 0, 16, 16, 0, expand),
+				PartPose.ZERO
+		);
+
+		parts.addOrReplaceChild("planes2",
+				CubeListBuilder.create()
+						.addBox(0, -8, -8, 0, 16, 16, expand)
+						.addBox(-8, -8, 0, 16, 16, 0, expand),
+				PartPose.rotation(0, pi / 4f, 0)
+		);
+
+		parts.addOrReplaceChild("planes3",
+				CubeListBuilder.create()
+						.addBox(0, -8, -8, 0, 16, 16, expand)
+						.addBox(-8, 0, -8, 16, 0, 16, expand),
+				PartPose.rotation(0, 0, pi / 4f)
+		);
+
+		parts.addOrReplaceChild("planes4",
+				CubeListBuilder.create()
+						.addBox(-8, 0, -8, 16, 0, 16, expand)
+						.addBox(-8, -8, 0, 16, 16, 0, expand),
+				PartPose.rotation(pi / 4f, 0, 0)
+		);
+
+		return LayerDefinition.create(mesh, 16, 16);
+	}
+
+	@Override
+	public void setupAnim(EntityTumbleweed p_102618_, float p_102619_, float p_102620_, float p_102621_, float p_102622_, float p_102623_) {
+	}
+
+	@Override
+	public ModelPart root() {
+		return root;
 	}
 
 }

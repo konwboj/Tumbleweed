@@ -3,20 +3,21 @@ package net.konwboy.tumbleweed.common;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import net.konwboy.tumbleweed.Tumbleweed;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.RegistryKey;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3i;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.gen.Heightmap;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.util.Mth;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -35,15 +36,15 @@ public class TumbleweedSpawner {
 	private static final int SEARCH_RADIUS = 2;
 	private static final int SPAWN_ATTEMPTS = 10;
 
-	private static void trySpawn(ServerWorld world) {
+	private static void trySpawn(ServerLevel world) {
 		Set<ChunkPos> eligibleChunksForSpawning = Sets.newHashSet();
 
-		for (PlayerEntity entityplayer : world.getPlayers()) {
+		for (Player entityplayer : world.players()) {
 			if (entityplayer.isSpectator())
 				continue;
 
-			int playerX = MathHelper.floor(entityplayer.getPosX() / 16d);
-			int playerZ = MathHelper.floor(entityplayer.getPosZ() / 16d);
+			int playerX = Mth.floor(entityplayer.getX() / 16d);
+			int playerZ = Mth.floor(entityplayer.getZ() / 16d);
 
 			for (int x = 8; x >= -8; x--) {
 				for (int z = 8; z >= -8; z--) {
@@ -53,13 +54,13 @@ public class TumbleweedSpawner {
 					if (eligibleChunksForSpawning.contains(chunk))
 						continue;
 
-					if (corner || !world.getWorldBorder().contains(chunk))
+					if (corner || !world.getWorldBorder().isWithinBounds(chunk))
 						continue;
 
 					if (!isEntityProcessing(world, chunk.x * 16, chunk.z * 16))
 						continue;
 
-					Optional<RegistryKey<Biome>> biome = world.func_242406_i(new BlockPos(chunk.getXStart() + 8, 0, chunk.getZStart() + 8));
+					Optional<ResourceKey<Biome>> biome = world.getBiomeName(new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8));
 					if (!biome.isPresent() || !isValidBiome(biome.get()))
 						continue;
 
@@ -71,15 +72,15 @@ public class TumbleweedSpawner {
 		List<ChunkPos> chunkList = Lists.newArrayList(eligibleChunksForSpawning);
 		Collections.shuffle(chunkList);
 
-		BlockPos worldSpawn = new BlockPos(world.getWorldInfo().getSpawnX(), world.getWorldInfo().getSpawnY(), world.getWorldInfo().getSpawnZ());
-		long current = world.getEntities().filter(e -> e.getType() == Tumbleweed.TUMBLEWEED).count();
-		int max = MathHelper.ceil(TumbleweedConfig.maxPerPlayer * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
+		BlockPos worldSpawn = new BlockPos(world.getLevelData().getXSpawn(), world.getLevelData().getYSpawn(), world.getLevelData().getZSpawn());
+		long current = world.getEntities(Tumbleweed.TUMBLEWEED, e -> true).size();
+		int max = Mth.ceil(TumbleweedConfig.maxPerPlayer * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
 
 		for (ChunkPos chunk : chunkList) {
 			if (current > max)
 				break;
 
-			if (world.rand.nextDouble() > TumbleweedConfig.spawnChance)
+			if (world.random.nextDouble() > TumbleweedConfig.spawnChance)
 				continue;
 
 			BlockPos start = getRandomSurfacePosition(world, chunk.x, chunk.z);
@@ -87,11 +88,11 @@ public class TumbleweedSpawner {
 
 			for (int x = -SEARCH_RADIUS; x <= SEARCH_RADIUS; x++)
 				for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++) {
-					BlockPos check = world.getHeight(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(start.getX() + x, 0, start.getZ() + z));
+					BlockPos check = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(start.getX() + x, 0, start.getZ() + z));
 					BlockState state = world.getBlockState(check);
 					Block block = state.getBlock();
 
-					if (TumbleweedConfig.spawningBlocks.contains(block.getRegistryName()) && world.canBlockSeeSky(check)) {
+					if (TumbleweedConfig.spawningBlocks.contains(block.getRegistryName()) && world.canSeeSkyFromBelowWater(check)) {
 						spawner = check;
 						break;
 					}
@@ -100,31 +101,31 @@ public class TumbleweedSpawner {
 			if (spawner == null)
 				continue;
 
-			int packSize = 1 + (world.rand.nextFloat() < 0.2f ? 1 : 0);
+			int packSize = 1 + (world.random.nextFloat() < 0.2f ? 1 : 0);
 			int packSpawned = 0;
 
 			for (int i = 0; i < SPAWN_ATTEMPTS; i++) {
-				int x = spawner.getX() + world.rand.nextInt(5) - world.rand.nextInt(5);
-				int y = spawner.getY() + world.rand.nextInt(2) - world.rand.nextInt(2);
-				int z = spawner.getZ() + world.rand.nextInt(5) - world.rand.nextInt(5);
+				int x = spawner.getX() + world.random.nextInt(5) - world.random.nextInt(5);
+				int y = spawner.getY() + world.random.nextInt(2) - world.random.nextInt(2);
+				int z = spawner.getZ() + world.random.nextInt(5) - world.random.nextInt(5);
 
 				if (!isEntityProcessing(world, x, z))
 					continue;
 
-				if (!world.getBlockState(new BlockPos(x, y - 1, z)).isSolid())
+				if (!world.getBlockState(new BlockPos(x, y - 1, z)).canOcclude())
 					continue;
 
-				if (world.isPlayerWithin(x, y, z, 32) || worldSpawn.distanceSq(new Vector3i(x, y, z)) < 24.0 * 24.0)
+				if (world.hasNearbyAlivePlayer(x, y, z, 32) || worldSpawn.distSqr(new Vec3i(x, y, z)) < 24.0 * 24.0)
 					continue;
 
 				EntityTumbleweed entity = Tumbleweed.TUMBLEWEED.create(world);
-				entity.setSize(world.rand.nextInt(5) - 2);
-				entity.setLocationAndAngles((double) x + 0.5, (double) y + 0.5 + 0.5 * world.rand.nextDouble(), (double) z + 0.5, 0.0F, 0.0F);
+				entity.setSize(world.random.nextInt(5) - 2);
+				entity.moveTo((double) x + 0.5, (double) y + 0.5 + 0.5 * world.random.nextDouble(), (double) z + 0.5, 0.0F, 0.0F);
 
 				if (entity.isNotColliding()) {
 					current++;
 					packSpawned++;
-					world.addEntity(entity);
+					world.addFreshEntity(entity);
 				}
 
 				if (packSpawned == packSize)
@@ -133,43 +134,40 @@ public class TumbleweedSpawner {
 		}
 	}
 
-	private static boolean isValidBiome(RegistryKey<Biome> biome) {
+	private static boolean isValidBiome(ResourceKey<Biome> biome) {
 		boolean rightType = BiomeDictionary.hasType(biome, BiomeDictionary.Type.DRY) || BiomeDictionary.hasType(biome, BiomeDictionary.Type.SANDY);
-		return TumbleweedConfig.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.biomeWhitelist.contains(biome.getLocation());
+		return TumbleweedConfig.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.biomeWhitelist.contains(biome.location());
 	}
 
-	private static BlockPos getRandomSurfacePosition(World world, int chunkX, int chunkZ) {
-		Chunk chunk = world.getChunk(chunkX, chunkZ);
-		int x = chunkX * 16 + world.rand.nextInt(16 - SEARCH_RADIUS) + SEARCH_RADIUS;
-		int z = chunkZ * 16 + world.rand.nextInt(16 - SEARCH_RADIUS) + SEARCH_RADIUS;
-		int y = chunk.getTopBlockY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+	private static BlockPos getRandomSurfacePosition(Level world, int chunkX, int chunkZ) {
+		LevelChunk chunk = world.getChunk(chunkX, chunkZ);
+		int x = chunkX * 16 + world.random.nextInt(16 - SEARCH_RADIUS) + SEARCH_RADIUS;
+		int z = chunkZ * 16 + world.random.nextInt(16 - SEARCH_RADIUS) + SEARCH_RADIUS;
+		int y = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 
 		return new BlockPos(x, y, z);
 	}
 
-	private static boolean isEntityProcessing(World world, double posX, double posZ) {
-		return world.getChunkProvider().isChunkLoaded(new ChunkPos(MathHelper.floor(posX) >> 4, MathHelper.floor(posZ) >> 4));
+	private static boolean isEntityProcessing(ServerLevel world, double posX, double posZ) {
+		return world.isPositionEntityTicking(new ChunkPos(Mth.floor(posX) >> 4, Mth.floor(posZ) >> 4));
 	}
 
 	@SubscribeEvent
 	public static void onTick(TickEvent.WorldTickEvent event) {
-		ServerWorld world = (ServerWorld) event.world;
+		ServerLevel world = (ServerLevel) event.world;
 
 		if (event.phase != TickEvent.Phase.END)
 			return;
 
-		if (world.getGameTime() % TRY_SPAWN_TICKS == 7 && world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) {
-			world.getProfiler().startSection("spawn_tumbleweed");
+		if (world.getGameTime() % TRY_SPAWN_TICKS == 7 && world.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING)) {
+			world.getProfiler().push("spawn_tumbleweed");
 			trySpawn(world);
-			world.getProfiler().endSection();
+			world.getProfiler().pop();
 		}
 
 		// De-spawn to prevent piling up in non entity-processing chunks
-		world.getEntities()
-			.filter(e -> e.getType() == Tumbleweed.TUMBLEWEED)
-			.map(t -> (EntityTumbleweed)t)
-			.filter(t -> !t.shouldPersist() && t.ticksExisted > 0 && !isEntityProcessing(world, t.getPosX(), t.getPosZ()))
-			.forEach(EntityTumbleweed::remove);
+		world.getEntities(Tumbleweed.TUMBLEWEED, t -> !t.shouldPersist() && t.tickCount > 0 && !isEntityProcessing(world, t.getX(), t.getZ()))
+			.forEach(t -> t.remove(Entity.RemovalReason.DISCARDED));
 	}
 
 }

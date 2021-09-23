@@ -5,17 +5,17 @@ import com.google.common.collect.Sets;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.konwboy.tumbleweed.Tumbleweed;
-import net.minecraft.block.Block;
-import net.minecraft.command.arguments.ItemParser;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.commands.arguments.item.ItemParser;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.fmllegacy.common.registry.GameRegistry;
 import net.minecraftforge.registries.IForgeRegistry;
 
 import java.util.List;
@@ -201,7 +201,7 @@ public class TumbleweedConfig {
 	}
 
 	@SubscribeEvent
-	public static void configReloading(ModConfig.Reloading event) {
+	public static void configReloading(ModConfigEvent.Reloading event) {
 		if (event.getConfig().getSpec() == SPEC) {
 			TumbleweedConfig.load();
 		}
