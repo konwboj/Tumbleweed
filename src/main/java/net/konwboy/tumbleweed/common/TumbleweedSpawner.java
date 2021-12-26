@@ -61,7 +61,7 @@ public class TumbleweedSpawner {
 						continue;
 
 					Optional<ResourceKey<Biome>> biome = world.getBiomeName(new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8));
-					if (!biome.isPresent() || !isValidBiome(biome.get()))
+					if (biome.isEmpty() || !isValidBiome(biome.get()))
 						continue;
 
 					eligibleChunksForSpawning.add(chunk);

@@ -9,14 +9,14 @@ buildscript {
 }
 apply plugin: 'net.minecraftforge.gradle'
 
-version = "1.17-0.4.10" // Remember to update in mods.toml
+version = "1.18-0.4.11" // Remember to update in mods.toml
 group = "net.konwboy.tumbleweed"
 archivesBaseName = "tumbleweed"
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(16)
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 minecraft {
-    mappings channel: 'official', version: '1.17.1'
+    mappings channel: 'official', version: '1.18.1'
 
     accessTransformer = file("src/main/resources/META-INF/accesstransformer.cfg")
 
@@ -27,7 +27,7 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             mods {
-                tubmleweed {
+                tumbleweed {
                     source sourceSets.main
                 }
             }
@@ -40,7 +40,7 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             mods {
-                tubmleweed {
+                tumbleweed {
                     source sourceSets.main
                 }
             }
@@ -49,5 +49,5 @@ minecraft {
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.17.1-37.0.70'
+    minecraft 'net.minecraftforge:forge:1.18.1-39.0.8'
 }

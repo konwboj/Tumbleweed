@@ -29,10 +29,11 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fmllegacy.common.registry.IEntityAdditionalSpawnData;
-import net.minecraftforge.fmllegacy.network.NetworkHooks;
+import net.minecraftforge.entity.IEntityAdditionalSpawnData;
+import net.minecraftforge.network.NetworkHooks;
 
 import java.util.List;
 import java.util.Random;
@@ -326,7 +327,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	private void dropItem() {
-		ItemStack item = TumbleweedConfig.getRandomItem();
+		ItemStack item = DropList.getRandomItem(getLevel());
 		if (item != null) {
 			ItemEntity itemEntity = new ItemEntity(this.level, this.getX(), this.getY(), this.getZ(), item);
 			itemEntity.setDeltaMovement(new Vec3(0, 0.2, 0));
@@ -370,7 +371,16 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	public boolean isNotColliding() {
-		return this.level.isUnobstructed(this) && !this.level.getBlockCollisions(this, this.getBoundingBox()).findAny().isPresent() && !this.level.containsAnyLiquid(this.getBoundingBox());
+		return this.level.isUnobstructed(this) && noBlockCollision() && !this.level.containsAnyLiquid(this.getBoundingBox());
+	}
+
+	private boolean noBlockCollision(){
+		for(VoxelShape voxelshape : this.level.getBlockCollisions(this, this.getBoundingBox())) {
+			if (!voxelshape.isEmpty()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public void setSize(int size) {
