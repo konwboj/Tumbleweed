@@ -5,6 +5,7 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.commands.arguments.item.ItemParser;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -77,18 +78,19 @@ public class DropList {
 			var item = parser.getItem();
 
 			//noinspection ConstantConditions
-			if (item == null) { // Tag entry
-				var tag = level.getServer().getTags().getOrEmpty(Registry.ITEM_REGISTRY).getTag(parser.getTag());
+			if (item == null) { // The parsed string is an item tag
+				var tagOpt = Registry.ITEM.getTag(parser.getTag());
 
-				if (tag == null) {
+				if (tagOpt.isEmpty()) {
 					Tumbleweed.logger.warn("Couldn't find item tag {}", parser.getTag());
 					return null;
 				}
 
-				if (tag.getValues().size() == 0)
-					return null;
+				var tag = tagOpt.get();
 
-				item = tag.getRandomElement(level.random);
+				item = tag.getRandomElement(level.random).map(Holder::value).orElse(null);
+				if (item == null)
+					return null;
 			}
 
 			ItemStack stack = new ItemStack(item, amount);

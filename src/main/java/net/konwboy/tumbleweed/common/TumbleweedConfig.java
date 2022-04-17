@@ -61,7 +61,8 @@ public class TumbleweedConfig {
 		DROP_DATA = builder
 				.comment(
 						"These items will drop from a tumbleweed upon destroying.",
-						"The identifier can be an item tag and can include NBT data. The amount parameter is optional.",
+						"The item format allows specifying item tags and NBT data. It follows vanilla's command argument format.",
+						"The amount parameter is optional.",
 						"weight item amount",
 						"Example entry: 2 minecraft:arrow{display:{Name:'{\"text\":\"Cool arrow\"}'}} 20")
 				.define("drops", Lists.newArrayList(DEFAULT_DROPS));

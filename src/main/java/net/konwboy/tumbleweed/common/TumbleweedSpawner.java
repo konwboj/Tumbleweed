@@ -60,7 +60,10 @@ public class TumbleweedSpawner {
 					if (!isEntityProcessing(world, chunk.x * 16, chunk.z * 16))
 						continue;
 
-					Optional<ResourceKey<Biome>> biome = world.getBiomeName(new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8));
+					Optional<ResourceKey<Biome>> biome = world
+							.getBiome(new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8))
+							.unwrapKey();
+
 					if (biome.isEmpty() || !isValidBiome(biome.get()))
 						continue;
 
@@ -149,7 +152,7 @@ public class TumbleweedSpawner {
 	}
 
 	private static boolean isEntityProcessing(ServerLevel world, double posX, double posZ) {
-		return world.isPositionEntityTicking(new ChunkPos(Mth.floor(posX) >> 4, Mth.floor(posZ) >> 4));
+		return world.isPositionEntityTicking(new BlockPos(posX, 64, posZ));
 	}
 
 	@SubscribeEvent
