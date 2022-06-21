@@ -20,13 +20,13 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 
 	public static final ModelLayerLocation MAIN_LAYER = new ModelLayerLocation(Tumbleweed.TUMBLEWEED_ENTITY, "main");
 	private static final ResourceLocation TEXTURE = new ResourceLocation(Tumbleweed.MOD_ID, "textures/entity/tumbleweed.png");
-	private static final RenderType TUMBLEWEED = ForgeRenderTypes.getUnlitTranslucent(TEXTURE, false);
+	private static final RenderType RENDER_TYPE = ForgeRenderTypes.getUnlitTranslucent(TEXTURE, true);
 
-	private final ModelTumbleweed tumbleweed;
+	private final ModelTumbleweed model;
 
 	public RenderTumbleweed(EntityRendererProvider.Context context) {
 		super(context);
-		this.tumbleweed = new ModelTumbleweed(context.bakeLayer(MAIN_LAYER));
+		this.model = new ModelTumbleweed(context.bakeLayer(MAIN_LAYER));
 		this.shadowRadius = 0.4f;
 		this.shadowStrength = 0.8f;
 	}
@@ -52,8 +52,8 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 		matrixStack.mulPose(Vector3f.YP.rotationDegrees(entity.rot2));
 		matrixStack.mulPose(Vector3f.ZP.rotationDegrees(entity.rot3));
 
-		VertexConsumer buf = bufferIn.getBuffer(TUMBLEWEED);
-		this.tumbleweed.renderToBuffer(
+		VertexConsumer buf = bufferIn.getBuffer(RENDER_TYPE);
+		this.model.renderToBuffer(
 				matrixStack,
 				buf,
 				packedLightIn,

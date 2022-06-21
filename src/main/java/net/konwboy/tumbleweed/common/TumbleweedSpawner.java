@@ -3,29 +3,29 @@ package net.konwboy.tumbleweed.common;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import net.konwboy.tumbleweed.Tumbleweed;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.util.Mth;
+import net.minecraft.core.Registry;
 import net.minecraft.core.Vec3i;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Mod.EventBusSubscriber
@@ -35,6 +35,12 @@ public class TumbleweedSpawner {
 	private static final int MOB_COUNT_DIV = 17 * 17;
 	private static final int SEARCH_RADIUS = 2;
 	private static final int SPAWN_ATTEMPTS = 10;
+
+	private static final TagKey<Biome> BIOME_WHITELIST =
+			TagKey.create(Registry.BIOME_REGISTRY, new ResourceLocation("tumbleweed", "whitelist"));
+
+	private static final TagKey<Block> SPAWNER_BLOCKS =
+			TagKey.create(Registry.BLOCK_REGISTRY, new ResourceLocation("tumbleweed", "spawners"));
 
 	private static void trySpawn(ServerLevel world) {
 		Set<ChunkPos> eligibleChunksForSpawning = Sets.newHashSet();
@@ -60,11 +66,10 @@ public class TumbleweedSpawner {
 					if (!isEntityProcessing(world, chunk.x * 16, chunk.z * 16))
 						continue;
 
-					Optional<ResourceKey<Biome>> biome = world
-							.getBiome(new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8))
-							.unwrapKey();
+					var biome = world
+							.getBiome(new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8));
 
-					if (biome.isEmpty() || !isValidBiome(biome.get()))
+					if (!biome.is(BIOME_WHITELIST))
 						continue;
 
 					eligibleChunksForSpawning.add(chunk);
@@ -77,13 +82,13 @@ public class TumbleweedSpawner {
 
 		BlockPos worldSpawn = new BlockPos(world.getLevelData().getXSpawn(), world.getLevelData().getYSpawn(), world.getLevelData().getZSpawn());
 		long current = world.getEntities(Tumbleweed.TUMBLEWEED, e -> true).size();
-		int max = Mth.ceil(TumbleweedConfig.maxPerPlayer * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
+		int max = Mth.ceil(TumbleweedConfig.MAX_PER_PLAYER.get() * eligibleChunksForSpawning.size() / (double) MOB_COUNT_DIV);
 
 		for (ChunkPos chunk : chunkList) {
 			if (current > max)
 				break;
 
-			if (world.random.nextDouble() > TumbleweedConfig.spawnChance)
+			if (world.random.nextDouble() > TumbleweedConfig.SPAWN_CHANCE.get())
 				continue;
 
 			BlockPos start = getRandomSurfacePosition(world, chunk.x, chunk.z);
@@ -93,9 +98,8 @@ public class TumbleweedSpawner {
 				for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++) {
 					BlockPos check = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(start.getX() + x, 0, start.getZ() + z));
 					BlockState state = world.getBlockState(check);
-					Block block = state.getBlock();
 
-					if (TumbleweedConfig.spawningBlocks.contains(block.getRegistryName()) && world.canSeeSkyFromBelowWater(check)) {
+					if (state.getBlockHolder().is(SPAWNER_BLOCKS) && world.canSeeSkyFromBelowWater(check)) {
 						spawner = check;
 						break;
 					}
@@ -135,11 +139,6 @@ public class TumbleweedSpawner {
 					break;
 			}
 		}
-	}
-
-	private static boolean isValidBiome(ResourceKey<Biome> biome) {
-		boolean rightType = BiomeDictionary.hasType(biome, BiomeDictionary.Type.DRY) || BiomeDictionary.hasType(biome, BiomeDictionary.Type.SANDY);
-		return TumbleweedConfig.biomeWhitelist.isEmpty() && rightType || TumbleweedConfig.biomeWhitelist.contains(biome.location());
 	}
 
 	private static BlockPos getRandomSurfacePosition(Level world, int chunkX, int chunkZ) {

@@ -1,6 +1,7 @@
 package net.konwboy.tumbleweed.common;
 
 import com.mojang.math.Quaternion;
+import net.konwboy.tumbleweed.Tumbleweed;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -12,6 +13,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -27,6 +29,10 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -34,6 +40,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Random;
@@ -59,7 +66,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	private int lifetime;
 	private float angularX, angularZ;
 	public float stretch = 1f, prevStretch = 1f;
-	private boolean prevOnGround;
+	private boolean prevVerticalCol;
 	private Vec3 prevMotion = Vec3.ZERO;
 
 	@OnlyIn(Dist.CLIENT)
@@ -145,11 +152,10 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	public EntityDimensions getDimensions(Pose pose) {
 		float mcSize = BASE_SIZE + this.getSize() * (1 / 8f);
 
-		// Fixes client-side collision glitches
-		if (level.isClientSide)
-			mcSize -= 1/2048f;
-
-		return EntityDimensions.scalable(mcSize, mcSize);
+		return EntityDimensions.scalable(
+			level.isClientSide ? mcSize - 1/1024f : mcSize, // Fixes client-side collision glitches
+			mcSize
+		);
 	}
 
 	@Override
@@ -182,6 +188,10 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 		if (this.level.isClientSide) {
 			preTickClient();
+		} else {
+			ServerEntity entry = getTrackerEntry();
+			if (entry != null)
+				entry.positionCodec.setBase(quantize(entry.positionCodec.decode(0, 0, 0))); // Fixing Mojangcode...
 		}
 
 		if (this.getVehicle() != null) {
@@ -193,7 +203,6 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			this.setDeltaMovement(getDeltaMovement().subtract(0, 0.012, 0));
 
 		prevMotion = this.getDeltaMovement();
-		prevOnGround = onGround;
 
 		this.move(MoverType.SELF, getDeltaMovement());
 
@@ -216,7 +225,7 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 		// Bounce on ground
 		if (this.onGround) {
 			if (windX * windX + windZ * windZ >= 0.05 * 0.05) {
-				this.setDeltaMovement(getDeltaMovement().x, Math.max(-prevMotion.y * 0.7, 0.24 - getSize() * 0.02), getDeltaMovement().z);
+				this.setDeltaMovement(getDeltaMovement().x, Math.max(-prevMotion.y * 0.7, 0.24 - Math.abs(getSize()) * 0.02), getDeltaMovement().z);
 			} else {
 				this.setDeltaMovement(getDeltaMovement().x, -prevMotion.y * 0.7, getDeltaMovement().z);
 			}
@@ -253,8 +262,11 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 	@OnlyIn(Dist.CLIENT)
 	private void tickClient() {
-		if (prevOnGround != onGround)
-			stretch *= 0.75f;
+		if (!prevVerticalCol && verticalCollision) {
+			stretch *= 0.70f;
+		}
+
+		prevVerticalCol = verticalCollision;
 
 		float motionAngleX = (float)-prevMotion.x / (getBbWidth() * 0.5f);
 		float motionAngleZ = (float)prevMotion.z / (getBbWidth() * 0.5f);
@@ -319,21 +331,37 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 			SoundType sound = SoundType.GRASS;
 			this.playSound(sound.getBreakSound(), (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
 
-			if (TumbleweedConfig.enableDrops && (!TumbleweedConfig.dropOnlyByPlayer || source.getEntity() instanceof Player))
-				dropItem();
+			if (TumbleweedConfig.ENABLE_DROPS.get() && (!TumbleweedConfig.DROP_ONLY_BY_PLAYER.get() || source.getEntity() instanceof Player))
+				dropFromLootTable(source);
 		}
 
 		return true;
 	}
 
-	private void dropItem() {
-		ItemStack item = DropList.getRandomItem(getLevel());
-		if (item != null) {
-			ItemEntity itemEntity = new ItemEntity(this.level, this.getX(), this.getY(), this.getZ(), item);
-			itemEntity.setDeltaMovement(new Vec3(0, 0.2, 0));
-			itemEntity.setDefaultPickUpDelay();
-			this.level.addFreshEntity(itemEntity);
-		}
+	@Nullable
+	@Override
+	public ItemEntity spawnAtLocation(ItemStack itemStack, float yOffset) {
+		ItemEntity item = super.spawnAtLocation(itemStack, yOffset);
+		if (item == null) return null;
+		item.setDeltaMovement(0, 0.2, 0);
+		return item;
+	}
+
+	protected void dropFromLootTable(DamageSource damageSource) {
+		LootTable loottable = this.level.getServer().getLootTables().get(Tumbleweed.TUMBLEWEED.getDefaultLootTable());
+		LootContext.Builder lootcontext$builder = this.createLootContext(damageSource);
+		LootContext ctx = lootcontext$builder.create(LootContextParamSets.ENTITY);
+		loottable.getRandomItems(ctx).forEach(this::spawnAtLocation);
+	}
+
+	protected LootContext.Builder createLootContext(DamageSource damageSource) {
+		return new LootContext.Builder((ServerLevel) this.level).
+			withRandom(this.random).
+			withParameter(LootContextParams.THIS_ENTITY, this).
+			withParameter(LootContextParams.ORIGIN, this.position()).
+			withParameter(LootContextParams.DAMAGE_SOURCE, damageSource).
+			withOptionalParameter(LootContextParams.KILLER_ENTITY, damageSource.getEntity()).
+			withOptionalParameter(LootContextParams.DIRECT_KILLER_ENTITY, damageSource.getDirectEntity());
 	}
 
 	@Override
@@ -348,7 +376,9 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 
 	@Override
 	public boolean canTrample(BlockState state, BlockPos pos, float fallDistance) {
-		return level.random.nextFloat() < 0.7F && level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING) && TumbleweedConfig.damageCrops;
+		return level.random.nextFloat() < 0.7F &&
+				level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING) &&
+				TumbleweedConfig.DAMAGE_CROPS.get();
 	}
 
 	@Override
@@ -408,30 +438,45 @@ public class EntityTumbleweed extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	public ServerEntity getTrackerEntry() {
-		return ((ServerLevel) level).getChunkSource().chunkMap.entityMap.get(getId()).serverEntity;
+		var ent = ((ServerLevel) level).getChunkSource().chunkMap.entityMap.get(getId());
+		if (ent == null) return null;
+		return ent.serverEntity;
 	}
 
 	@Override
 	public void writeSpawnData(FriendlyByteBuf buffer) {
 		ServerEntity entry = getTrackerEntry();
-		buffer.writeLong(entry.xp);
-		buffer.writeLong(entry.yp);
-		buffer.writeLong(entry.zp);
+
+		// Only really necessary for the first time the first player sees this entity before it starts ticking
+		Vec3 base = quantize(entry.positionCodec.decode(0, 0, 0));
+		entry.positionCodec.setBase(base);
+
+		buffer.writeDouble(base.x);
+		buffer.writeDouble(base.y);
+		buffer.writeDouble(base.z);
 	}
 
 	@Override
 	public void readSpawnData(FriendlyByteBuf additionalData) {
 		// Fixes some more cases of rubber banding
-		this.setPacketCoordinates(
-				additionalData.readLong() / 4096.0D,
-				additionalData.readLong() / 4096.0D,
-				additionalData.readLong() / 4096.0D
+		this.syncPacketPositionCodec(
+			additionalData.readDouble(),
+			additionalData.readDouble(),
+			additionalData.readDouble()
 		);
 	}
 
 	@Override
 	public Packet<?> getAddEntityPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
+	}
+
+	private static double quantize(double d) {
+		return Mth.lfloor(d * 4096.0D) / 4096.0;
+	}
+
+	private static Vec3 quantize(Vec3 v) {
+		return new Vec3(quantize(v.x), quantize(v.y), quantize(v.z));
 	}
 
 }
