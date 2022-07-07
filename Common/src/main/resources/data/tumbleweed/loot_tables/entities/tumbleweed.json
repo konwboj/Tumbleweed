@@ -1,0 +1,49 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:tag",
+          "name": "tumbleweed:drop_common",
+          "expand": true,
+          "weight": 17
+        },
+        {
+          "type": "minecraft:tag",
+          "name": "tumbleweed:drop_uncommon",
+          "expand": true,
+          "weight": 7
+        },
+        {
+          "type": "minecraft:tag",
+          "name": "tumbleweed:drop_rare",
+          "expand": true,
+          "weight": 4
+        },
+        {
+          "type": "minecraft:tag",
+          "name": "tumbleweed:drop_epic",
+          "expand": true,
+          "weight": 1
+        },
+        {
+          "conditions": [
+            {
+              "condition": "minecraft:entity_properties",
+              "entity": "killer",
+              "predicate": {
+                "type": "#minecraft:skeletons"
+              }
+            }
+          ],
+          "type": "minecraft:tag",
+          "expand": true,
+          "name": "minecraft:creeper_drop_music_discs",
+          "weight": 1
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

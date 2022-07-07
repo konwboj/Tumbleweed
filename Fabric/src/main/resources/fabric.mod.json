@@ -1,0 +1,31 @@
+{
+    "schemaVersion": 1,
+    "id": "tumbleweed",
+    "version": "${version}",
+    "name": "Tumbleweed",
+    "description": "Tumbleweeds spawn around dead bushes in deserts. They drop random goodies upon destroying.",
+    "authors": [
+      "konwboy"
+    ],
+    "icon": "assets/tumbleweed/icon.png",
+    "license": "GNU LGPLv3",
+    "environment": "*",
+    "entrypoints": {
+      "main": [
+        "net.konwboy.tumbleweed.FabricMod"
+      ],
+      "client": [
+        "net.konwboy.tumbleweed.FabricClient"
+      ]
+    },
+    "mixins": [
+      "tumbleweed.mixins.json"
+    ],
+    "depends": {
+      "fabricloader": ">=0.14",
+      "fabric": "*",
+      "minecraft": "1.19.x",
+      "java": ">=17"
+    }
+  }
+  

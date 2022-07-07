@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[41,)"
+license="GNU LGPLv3"
+
+[[mods]]
+modId="tumbleweed"
+version="${version}"
+displayName="Tumbleweed"
+logoFile="logo.png"
+authors="konwboy"
+description='Tumbleweeds spawn around dead bushes in deserts. They drop random goodies upon destroying.'

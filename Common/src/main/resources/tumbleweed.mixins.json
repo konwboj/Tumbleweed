@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.konwboy.tumbleweed.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ChunkMapAccessor",
+    "FarmlandMixin",
+    "MobAccessor",
+    "ServerEntityMixin",
+    "SkeletonAccessor",
+    "SynchedDataAccessor",
+    "TrackedEntityAccessor"
+  ],
+  "client": [
+  ],
+  "server": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "${refmap_target}refmap.json"
+}

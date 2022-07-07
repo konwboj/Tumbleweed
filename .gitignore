@@ -1,12 +1,23 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
 *.iml
-*.jar
-/.gradle
-/build
-/gradle
-*.txt
-*.xml
-gradlew
-gradlew.bat
-gradle.properties
-/run
-/.idea
+.idea/*
+!.idea/scopes
+
+# gradle
+build
+.gradle
+
+# other
+eclipse
+run
