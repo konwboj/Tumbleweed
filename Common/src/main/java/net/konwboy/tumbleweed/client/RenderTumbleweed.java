@@ -6,6 +6,7 @@ import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
 import net.konwboy.tumbleweed.Constants;
 import net.konwboy.tumbleweed.common.EntityTumbleweed;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -14,6 +15,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.EntityHitResult;
 
 public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 
@@ -67,6 +69,12 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 		matrixStack.popPose();
 
 		super.render(entity, entityYaw, partialTicks, matrixStack, bufferIn, packedLightIn);
+	}
+
+	@Override
+	protected boolean shouldShowName(EntityTumbleweed entity) {
+		return entity.hasCustomName() &&
+				(entity.shouldShowName() || Minecraft.getInstance().hitResult instanceof EntityHitResult hit && hit.getEntity() == entity);
 	}
 
 	@Override

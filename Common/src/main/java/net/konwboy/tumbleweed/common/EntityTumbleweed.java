@@ -327,6 +327,7 @@ public class EntityTumbleweed extends Entity {
 				persistent = true;
 				stack.shrink(1);
 			}
+
 			return InteractionResult.sidedSuccess(level.isClientSide);
 		} else
 		{

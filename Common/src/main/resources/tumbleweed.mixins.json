@@ -9,6 +9,7 @@
     "MobAccessor",
     "ServerEntityMixin",
     "SkeletonAccessor",
+    "SkeletonMixin",
     "SynchedDataAccessor",
     "TrackedEntityAccessor"
   ],
