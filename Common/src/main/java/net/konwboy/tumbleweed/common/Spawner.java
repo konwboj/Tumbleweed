@@ -4,8 +4,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import net.konwboy.tumbleweed.services.Services;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
@@ -32,10 +32,10 @@ public class Spawner {
 	private static final int SPAWN_ATTEMPTS = 10;
 
 	private static final TagKey<Biome> BIOME_WHITELIST =
-			TagKey.create(Registry.BIOME_REGISTRY, new ResourceLocation("tumbleweed", "whitelist"));
+			TagKey.create(Registries.BIOME, new ResourceLocation("tumbleweed", "whitelist"));
 
 	private static final TagKey<Block> SPAWNER_BLOCKS =
-			TagKey.create(Registry.BLOCK_REGISTRY, new ResourceLocation("tumbleweed", "spawners"));
+			TagKey.create(Registries.BLOCK, new ResourceLocation("tumbleweed", "spawners"));
 
 	public static void endWorldTick(EntityType<EntityTumbleweed> type, ServerLevel world) {
 		if (world.getGameTime() % Spawner.TRY_SPAWN_TICKS == 7) {
@@ -44,7 +44,7 @@ public class Spawner {
 			world.getProfiler().pop();
 		}
 
-		world.getEntities(type, t -> true).forEach(EntityTumbleweed::tickDespawn);
+		world.getEntities(type, t -> true).forEach(EntityTumbleweed::tickDespawnNonEntityProcessing);
 	}
 
 	private static void trySpawn(EntityType<EntityTumbleweed> type, ServerLevel world) {

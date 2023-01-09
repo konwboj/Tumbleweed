@@ -1,11 +1,11 @@
 package net.konwboy.tumbleweed.common;
 
-import com.mojang.math.Quaternion;
 import net.konwboy.tumbleweed.services.Services;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -39,6 +39,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
 
 import java.util.List;
 import java.util.Random;
@@ -46,7 +47,7 @@ import java.util.Random;
 public class EntityTumbleweed extends Entity {
 
 	public static final int FADE_TIME = 4 * 20;
-	private static final int DESPAWN_RANGE = 110;
+	private static final int DESPAWN_RANGE = 160;
 	private static final float BASE_SIZE = 3/4f;
 	private static final double WIND_X = -1/16f;
 	private static final double WIND_Z = -1/16f;
@@ -68,9 +69,9 @@ public class EntityTumbleweed extends Entity {
 	private Vec3 prevMotion = Vec3.ZERO;
 	private int despawnCounter;
 
-	public float rot1, rot2, rot3;
-	public Quaternion quat;
-	public Quaternion prevQuat;
+	public float rotOffsetX, rotOffsetY, rotOffsetZ;
+	public Quaternionf quat;
+	public Quaternionf prevQuat;
 
 	public EntityTumbleweed(EntityType<?> type, Level world) {
 		super(type, world);
@@ -86,12 +87,12 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	private void initClient() {
-		this.rot1 = 360f * level.random.nextFloat();
-		this.rot2 = 360f * level.random.nextFloat();
-		this.rot3 = 360f * level.random.nextFloat();
+		this.rotOffsetX = 360f * level.random.nextFloat();
+		this.rotOffsetY = 360f * level.random.nextFloat();
+		this.rotOffsetZ = 360f * level.random.nextFloat();
 
-		this.quat = new Quaternion(0, 0, 0, 1);
-		this.prevQuat = new Quaternion(0, 0, 0, 1);
+		this.quat = new Quaternionf();
+		this.prevQuat = new Quaternionf();
 	}
 
 	@Override
@@ -248,7 +249,7 @@ public class EntityTumbleweed extends Entity {
 		stretch *= 1.2f;
 		if (stretch > 1f) stretch = 1f;
 
-		this.prevQuat = new Quaternion(this.quat);
+		this.prevQuat = new Quaternionf(this.quat);
 	}
 
 	private void tickClient() {
@@ -258,8 +259,8 @@ public class EntityTumbleweed extends Entity {
 
 		prevVerticalCol = verticalCollision;
 
-		float motionAngleX = (float)-prevMotion.x / (getBbWidth() * 0.5f);
-		float motionAngleZ = (float)prevMotion.z / (getBbWidth() * 0.5f);
+		float motionAngleX = (float)prevMotion.z / (getBbWidth() * 0.5f);
+		float motionAngleZ = (float)-prevMotion.x / (getBbWidth() * 0.5f);
 
 		if (onGround) {
 			angularX = motionAngleX;
@@ -275,7 +276,8 @@ public class EntityTumbleweed extends Entity {
 		angularX *= resistance;
 		angularZ *= resistance;
 
-		Quaternion temp = new Quaternion(angularZ, 0, angularX, false);
+		Quaternionf temp = new Quaternionf();
+		temp.rotateXYZ(angularX, 0, angularZ);
 		temp.mul(quat);
 		quat = temp;
 	}
@@ -297,7 +299,7 @@ public class EntityTumbleweed extends Entity {
 		return persistent || getVehicle() != null;
 	}
 
-	public void tickDespawn() {
+	public void tickDespawnNonEntityProcessing() {
 		// De-spawn to prevent piling up in non entity-processing chunks
 		if (!shouldPersist() && tickCount > 0 && Spawner.isNonEntityProcessing((ServerLevel) level, blockPosition())) {
 			despawnCounter++;
@@ -460,7 +462,7 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	@Override
-	public Packet<?> getAddEntityPacket() {
+	public Packet<ClientGamePacketListener> getAddEntityPacket() {
 		return new ClientboundAddEntityPacket(this);
 	}
 }

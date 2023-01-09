@@ -2,8 +2,7 @@ package net.konwboy.tumbleweed.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Quaternion;
-import com.mojang.math.Vector3f;
+import com.mojang.math.Axis;
 import net.konwboy.tumbleweed.Constants;
 import net.konwboy.tumbleweed.common.EntityTumbleweed;
 import net.minecraft.client.Minecraft;
@@ -16,6 +15,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.EntityHitResult;
+import org.joml.Quaternionf;
 
 public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 
@@ -24,6 +24,7 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 	private static final RenderType RENDER_TYPE = RenderType.entityTranslucent(TEXTURE);
 
 	private final ModelTumbleweed model;
+	private final Quaternionf tempQuat = new Quaternionf();
 
 	public RenderTumbleweed(EntityRendererProvider.Context context) {
 		super(context);
@@ -47,11 +48,11 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 		matrixStack.scale(size, size, size);
 		matrixStack.scale(1, stretch, 1);
 
-		matrixStack.mulPose(slerp(entity.prevQuat, entity.quat, partialTicks));
+		matrixStack.mulPose(entity.prevQuat.slerp(entity.quat, partialTicks, tempQuat));
 
-		matrixStack.mulPose(Vector3f.XP.rotationDegrees(entity.rot1));
-		matrixStack.mulPose(Vector3f.YP.rotationDegrees(entity.rot2));
-		matrixStack.mulPose(Vector3f.ZP.rotationDegrees(entity.rot3));
+		matrixStack.mulPose(Axis.XP.rotationDegrees(entity.rotOffsetX));
+		matrixStack.mulPose(Axis.YP.rotationDegrees(entity.rotOffsetY));
+		matrixStack.mulPose(Axis.ZP.rotationDegrees(entity.rotOffsetZ));
 
 		VertexConsumer buf = bufferIn.getBuffer(RENDER_TYPE);
 
@@ -80,51 +81,6 @@ public class RenderTumbleweed extends EntityRenderer<EntityTumbleweed> {
 	@Override
 	public ResourceLocation getTextureLocation(EntityTumbleweed entity) {
 		return TEXTURE;
-	}
-
-	private static final double THRESHOLD = 0.9995;
-	public static Quaternion slerp(Quaternion v0, Quaternion v1, float t)
-	{
-		// From https://en.wikipedia.org/w/index.php?title=Slerp&oldid=928959428
-		// License: CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/
-
-		// Compute the cosine of the angle between the two vectors.
-		// If the dot product is negative, slerp won't take
-		// the shorter path. Note that v1 and -v1 are equivalent when
-		// the negation is applied to all four components. Fix by
-		// reversing one quaternion.
-		float dot = v0.i() * v1.i() + v0.j() * v1.j() + v0.k() * v1.k() + v0.r() * v1.r();
-		if (dot < 0.0f) {
-			v1 = new Quaternion(-v1.i(), -v1.j(), -v1.k(), -v1.r());
-			dot = -dot;
-		}
-
-		// If the inputs are too close for comfort, linearly interpolate
-		// and normalize the result.
-		if (dot > THRESHOLD) {
-			float x = Mth.lerp(t, v0.i(), v1.i());
-			float y = Mth.lerp(t, v0.j(), v1.j());
-			float z = Mth.lerp(t, v0.k(), v1.k());
-			float w = Mth.lerp(t, v0.r(), v1.r());
-			return new Quaternion(x,y,z,w);
-		}
-
-		// Since dot is in range [0, DOT_THRESHOLD], acos is safe
-		float angle01 = (float)Math.acos(dot);
-		float angle0t = angle01*t;
-		float sin0t = Mth.sin(angle0t);
-		float sin01 = Mth.sin(angle01);
-		float sin1t = Mth.sin(angle01 - angle0t);
-
-		float s1 = sin0t / sin01;
-		float s0 = sin1t / sin01;
-
-		return new Quaternion(
-				s0 * v0.i() + s1 * v1.i(),
-				s0 * v0.j() + s1 * v1.j(),
-				s0 * v0.k() + s1 * v1.k(),
-				s0 * v0.r() + s1 * v1.r()
-		);
 	}
 
 }
