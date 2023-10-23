@@ -32,7 +32,7 @@ public class ShootTumbleweed extends Goal {
 		if (mob.getRandom().nextFloat() > 0.003F) {
 			return false;
 		} else {
-			Entity tumbleweed = findTarget(mob.level.getEntitiesOfClass(EntityTumbleweed.class, mob.getBoundingBox().inflate(MAX_DISTANCE, 3.0D, MAX_DISTANCE), e -> true), mob, mob.getX(), mob.getEyeY(), mob.getZ());
+            Entity tumbleweed = findTarget(mob.level().getEntitiesOfClass(EntityTumbleweed.class, mob.getBoundingBox().inflate(MAX_DISTANCE, 3.0D, MAX_DISTANCE), e -> true), mob, mob.getX(), mob.getEyeY(), mob.getZ());
 
 			if (tumbleweed == null) {
 				return false;
@@ -86,7 +86,7 @@ public class ShootTumbleweed extends Goal {
 		double dist = Math.sqrt(dX * dX + dZ * dZ);
 		arrow.shoot(dX, dY + dist * 0.2F, dZ, 1.6F, 1);
 		mob.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (mob.getRandom().nextFloat() * 0.4F + 0.8F));
-		mob.level.addFreshEntity(arrow);
+        mob.level().addFreshEntity(arrow);
 	}
 
 	@Override

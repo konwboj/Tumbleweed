@@ -10,17 +10,14 @@ import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.AbstractMinecart;
@@ -31,7 +28,7 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -81,15 +78,15 @@ public class EntityTumbleweed extends Entity {
 
 		setId(getId());
 
-		if (this.level.isClientSide) {
+		if (this.level().isClientSide) {
 			initClient();
 		}
 	}
 
 	private void initClient() {
-		this.rotOffsetX = 360f * level.random.nextFloat();
-		this.rotOffsetY = 360f * level.random.nextFloat();
-		this.rotOffsetZ = 360f * level.random.nextFloat();
+		this.rotOffsetX = 360f * level().random.nextFloat();
+		this.rotOffsetY = 360f * level().random.nextFloat();
+		this.rotOffsetZ = 360f * level().random.nextFloat();
 
 		this.quat = new Quaternionf();
 		this.prevQuat = new Quaternionf();
@@ -149,7 +146,7 @@ public class EntityTumbleweed extends Entity {
 		float mcSize = BASE_SIZE + this.getSize() * (1 / 8f);
 
 		return EntityDimensions.scalable(
-			level.isClientSide ? mcSize - 1/1024f : mcSize, // Fixes client-side collision glitches
+				level().isClientSide ? mcSize - 1 / 1024f : mcSize, // Fixes client-side collision glitches
 			mcSize
 		);
 	}
@@ -179,7 +176,7 @@ public class EntityTumbleweed extends Entity {
 	public void tick() {
 		super.tick();
 
-		if (this.level.isClientSide) {
+		if (this.level().isClientSide) {
 			preTickClient();
 		}
 
@@ -207,12 +204,12 @@ public class EntityTumbleweed extends Entity {
 		}
 
 		// Rotate
-		if (this.level.isClientSide) {
+		if (this.level().isClientSide) {
 			tickClient();
 		}
 
 		// Bounce on ground
-		if (this.onGround) {
+		if (this.onGround()) {
 			if (windX * windX + windZ * windZ >= 0.05 * 0.05) {
 				this.setDeltaMovement(getDeltaMovement().x, Math.max(-prevMotion.y * 0.7, 0.24 - Math.abs(getSize()) * 0.02), getDeltaMovement().z);
 			} else {
@@ -225,7 +222,7 @@ public class EntityTumbleweed extends Entity {
 
 		collideWithNearbyEntities();
 
-		if (!this.level.isClientSide) {
+		if (!this.level().isClientSide) {
 			// Age faster when stuck on a wall or in water
 			this.age += (horizontalCollision || isInWater()) ? 8 : 1;
 
@@ -262,7 +259,7 @@ public class EntityTumbleweed extends Entity {
 		float motionAngleX = (float)prevMotion.z / (getBbWidth() * 0.5f);
 		float motionAngleZ = (float)-prevMotion.x / (getBbWidth() * 0.5f);
 
-		if (onGround) {
+		if (onGround()) {
 			angularX = motionAngleX;
 			angularZ = motionAngleZ;
 		}
@@ -289,7 +286,7 @@ public class EntityTumbleweed extends Entity {
 		}
 
 		// Despawn if no player nearby
-		Player player = this.level.getNearestPlayer(this, -1);
+		Player player = this.level().getNearestPlayer(this, -1);
 		if (player != null && player.distanceToSqr(this) > DESPAWN_RANGE * DESPAWN_RANGE)
 			this.remove(RemovalReason.UNLOADED_WITH_PLAYER);
 	}
@@ -301,7 +298,7 @@ public class EntityTumbleweed extends Entity {
 
 	public void tickDespawnNonEntityProcessing() {
 		// De-spawn to prevent piling up in non entity-processing chunks
-		if (!shouldPersist() && tickCount > 0 && Spawner.isNonEntityProcessing((ServerLevel) level, blockPosition())) {
+		if (!shouldPersist() && tickCount > 0 && Spawner.isNonEntityProcessing((ServerLevel) level(), blockPosition())) {
 			despawnCounter++;
 		} else {
 			despawnCounter = 0;
@@ -323,14 +320,14 @@ public class EntityTumbleweed extends Entity {
 		var stack = player.getItemInHand(hand);
 		if (stack.getItem() == Items.NAME_TAG && stack.hasCustomHoverName())
 		{
-			if (!level.isClientSide)
+			if (!level().isClientSide)
 			{
 				setCustomName(stack.getHoverName());
 				persistent = true;
 				stack.shrink(1);
 			}
 
-			return InteractionResult.sidedSuccess(level.isClientSide);
+			return InteractionResult.sidedSuccess(level().isClientSide);
 		} else
 		{
 			return InteractionResult.PASS;
@@ -343,7 +340,7 @@ public class EntityTumbleweed extends Entity {
 			return false;
 		}
 
-		if (this.isAlive() && !this.level.isClientSide) {
+		if (this.isAlive() && !this.level().isClientSide) {
 			this.remove(RemovalReason.KILLED);
 
 			SoundType sound = SoundType.GRASS;
@@ -372,25 +369,24 @@ public class EntityTumbleweed extends Entity {
 
 	// Copied from LivingEntity
 	protected void dropFromLootTable(DamageSource damageSource) {
-		LootTable loottable = this.level.getServer().getLootTables().get(getType().getDefaultLootTable());
-		LootContext.Builder lootcontext$builder = this.createLootContext(damageSource);
-		LootContext ctx = lootcontext$builder.create(LootContextParamSets.ENTITY);
-		loottable.getRandomItems(ctx).forEach(this::spawnAtLocation);
+		ResourceLocation lootTableLocation = getType().getDefaultLootTable();
+		LootTable lootTable = this.level().getServer().getLootData().getLootTable(lootTableLocation);
+		lootTable.getRandomItems(createLootParams(damageSource), 0L, this::spawnAtLocation);
 	}
 
-	protected LootContext.Builder createLootContext(DamageSource damageSource) {
-		return new LootContext.Builder((ServerLevel) this.level).
-			withRandom(this.random).
-			withParameter(LootContextParams.THIS_ENTITY, this).
-			withParameter(LootContextParams.ORIGIN, this.position()).
-			withParameter(LootContextParams.DAMAGE_SOURCE, damageSource).
-			withOptionalParameter(LootContextParams.KILLER_ENTITY, damageSource.getEntity()).
-			withOptionalParameter(LootContextParams.DIRECT_KILLER_ENTITY, damageSource.getDirectEntity());
+	protected LootParams createLootParams(DamageSource damageSource) {
+		return (new LootParams.Builder((ServerLevel) this.level()))
+				.withParameter(LootContextParams.THIS_ENTITY, this)
+				.withParameter(LootContextParams.ORIGIN, this.position())
+				.withParameter(LootContextParams.DAMAGE_SOURCE, damageSource)
+				.withOptionalParameter(LootContextParams.KILLER_ENTITY, damageSource.getEntity())
+				.withOptionalParameter(LootContextParams.DIRECT_KILLER_ENTITY, damageSource.getDirectEntity())
+				.create(LootContextParamSets.ENTITY);
 	}
 
 	@Override
 	public boolean skipAttackInteraction(Entity entityIn) {
-		return entityIn instanceof Player && this.hurt(DamageSource.playerAttack((Player) entityIn), 0.0F);
+		return entityIn instanceof Player && this.hurt(this.damageSources().playerAttack((Player) entityIn), 0.0F);
 	}
 
 	@Override
@@ -400,8 +396,8 @@ public class EntityTumbleweed extends Entity {
 
 	// This is handled by Forge but not Fabric so a mixin is used (see FarmlandMixin)
 	public boolean canTumbleweedTrample(BlockState state, BlockPos pos, float fallDistance) {
-		return level.random.nextFloat() < 0.7F &&
-				level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING) &&
+		return level().random.nextFloat() < 0.7F &&
+				level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING) &&
 				Services.CONFIG.damageCrops();
 	}
 
@@ -411,10 +407,10 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	private void collideWithNearbyEntities() {
-		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().expandTowards(0.2D, 0.0D, 0.2D), Entity::isPushable);
+		List<Entity> list = this.level().getEntities(this, this.getBoundingBox().expandTowards(0.2D, 0.0D, 0.2D), Entity::isPushable);
 
 		for (Entity entity : list) {
-			if (!this.level.isClientSide && entity instanceof AbstractMinecart && ((AbstractMinecart) entity).getMinecartType() == Minecart.Type.RIDEABLE && entity.getDeltaMovement().x * entity.getDeltaMovement().x + entity.getDeltaMovement().z * entity.getDeltaMovement().z > 0.01D && entity.getPassengers().isEmpty() && this.getVehicle() == null) {
+			if (!this.level().isClientSide && entity instanceof AbstractMinecart && ((AbstractMinecart) entity).getMinecartType() == Minecart.Type.RIDEABLE && entity.getDeltaMovement().x * entity.getDeltaMovement().x + entity.getDeltaMovement().z * entity.getDeltaMovement().z > 0.01D && entity.getPassengers().isEmpty() && this.getVehicle() == null) {
 				this.startRiding(entity);
 				this.setDeltaMovement(getDeltaMovement().add(0, 0.25, 0));
 				this.hurtMarked = true;
@@ -425,11 +421,11 @@ public class EntityTumbleweed extends Entity {
 	}
 
 	public boolean isNotColliding() {
-		return this.level.isUnobstructed(this) && noBlockCollision() && !this.level.containsAnyLiquid(this.getBoundingBox());
+		return this.level().isUnobstructed(this) && noBlockCollision() && !this.level().containsAnyLiquid(this.getBoundingBox());
 	}
 
 	private boolean noBlockCollision(){
-		for (VoxelShape voxelshape : this.level.getBlockCollisions(this, this.getBoundingBox())) {
+		for (VoxelShape voxelshape : this.level().getBlockCollisions(this, this.getBoundingBox())) {
 			if (!voxelshape.isEmpty()) {
 				return false;
 			}
