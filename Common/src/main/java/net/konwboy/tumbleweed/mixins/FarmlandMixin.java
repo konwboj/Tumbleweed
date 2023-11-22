@@ -17,7 +17,7 @@ public class FarmlandMixin {
 	@Inject(at = @At("HEAD"), method = "fallOn")
 	private void fallOn(Level level, BlockState block, BlockPos pos, Entity entity, float height, CallbackInfo ci){
 		if (!level.isClientSide && entity instanceof EntityTumbleweed && ((EntityTumbleweed) entity).canTumbleweedTrample(block, pos, height))
-			FarmBlock.turnToDirt(block, level, pos);
+			FarmBlock.turnToDirt(entity, block, level, pos);
 	}
 
 }

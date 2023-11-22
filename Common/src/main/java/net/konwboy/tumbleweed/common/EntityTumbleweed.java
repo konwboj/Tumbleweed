@@ -390,7 +390,7 @@ public class EntityTumbleweed extends Entity {
 
 	@Override
 	public boolean skipAttackInteraction(Entity entityIn) {
-		return entityIn instanceof Player && this.hurt(DamageSource.playerAttack((Player) entityIn), 0.0F);
+		return entityIn instanceof Player && this.hurt(damageSources().playerAttack((Player) entityIn), 0.0F);
 	}
 
 	@Override
